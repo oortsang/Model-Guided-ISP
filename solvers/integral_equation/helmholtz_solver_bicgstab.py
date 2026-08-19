@@ -23,7 +23,7 @@ from typing import List, Tuple
 import numpy as np
 import torch
 
-from solvers.integral_equation.Helmholtz_solver_utils import (
+from solvers.integral_equation.helmholtz_solver_utils import (
     greensfunction3,
     getGscat2circ,
     find_diag_correction,

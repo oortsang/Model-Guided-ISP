@@ -18,7 +18,7 @@ output-meas-dir: 2025-09-23_ood_dataset_contrast_3.0
 
 # Slurm/badger stuff
 logs-rel-dir: logs/gen_data_ood/
-partition: "gpu,willett-gpu"
+partition: "gpu"
 jobs-rel-dir: jobs/gen_data_ood
 badger-fake-submission: false
 badger-overwrite-scripts: true

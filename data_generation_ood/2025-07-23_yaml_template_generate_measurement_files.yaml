@@ -15,7 +15,7 @@ definitions:
 
   default_arguments:
     log_dir: <<logs-rel-dir=logs/mpsr/run_pde_solver>>
-    partition: <<partition="willett-gpu">>
+    partition: <<partition="gpu">>
     num_nodes: 1
     num_gpu: <<num-gpu=1>>
     num_cpu: <<num-cpu=4>>

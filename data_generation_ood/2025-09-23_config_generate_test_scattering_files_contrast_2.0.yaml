@@ -8,9 +8,8 @@ definitions:
   default_arguments:
     mem: "50G"
     logs_folder: logs/gen_data_ood
-    # partition: "willett-contrib"
     # Adjust for the TTIC beehive cluster
-    partition: "gpu,willett-gpu"
+    partition: "gpu"
     num_nodes: 1
     num_gpu: 1
     num_cpu: 4
@@ -24,7 +23,6 @@ definitions:
       overwrite_scripts: true
 
   constants:
-    # dir_out: &DIR_OUT "/net/projects/willettlab/meliao/recursive-linearization/generated/2024-01-19_test_scattering_objs"
     dir_out: &DIR_OUT "/home-nfs/oortsang/rlc-repo/rlc_data/predictions/2025-09-23_ood_dataset_contrast_2.0/test_scattering_objs"
 
 arguments:

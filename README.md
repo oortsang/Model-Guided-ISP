@@ -78,7 +78,7 @@ The pipeline generation step parses the configuration file and prepares Slurm sc
 In case you need to inspect individual files, the pipeline generation command creates a directory within `pipeline_scripts` to hold the pickled pipeline as well as Badger configuration files corresponding to each block. The individual Slurm scripts are placed in `jobs/mmg_pipeline/`.
 
 ## Recursive linearization baseline
-The RecLin baseline can be invoked using [Badger](https://github.com/oortsang/badger-modified) as `python -m badger experiments/2025-10-31_config_rl_mod_{noise,ood}.yaml`.
+The RecLin baseline can be invoked using [Badger](https://github.com/oortsang/badger-modified) as `python -m badger experiments/2025-10-31_config_rl_mod_{noise,ood}.yaml`. Note that you may need to set up the `logs/rl/` directory ahead of time for the Slurm submission to work; we offer a `make_log_dirs.sh` script to automatically create this directory, along with other log directories that may be required for the other experiments.
 
 ## Dataset
 The dataset will be made available [via Zenodo](https://doi.org/10.5281/zenodo.21939523) (note: link may not be live yet). There are up to 10,000 scattering potentials in the training set and 1,000 in each of the validation and test sets. The measurements correspond to $\nu=\nicefrac{k}{2\pi}=1,2,3,\dots,10$ (i.e., the wavelength goes from 1 per domain sidelength to 10 per domain sidelength).

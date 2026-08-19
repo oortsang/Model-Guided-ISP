@@ -1,0 +1,35 @@
+name: Install Environment via Conda and Test
+
+on: [push]
+
+jobs:
+  test-suite:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5
+
+    steps:
+    - uses: actions/checkout@v4
+    # - name: Set up Miniconda
+    #   uses: conda-incubator/setup-miniconda@v2
+    #   with:
+    #     python-version: 3.11
+    #     auto-activate-base: false
+    # - name: Create environment
+    #   run: conda env create --file cpu_env.yaml --env-spec environment.yml
+    # - name: Test with pytest
+    #   run: conda run -n cpu-hpscnn-env python -m pytest test/
+    #   shell: bash -l {0}
+
+
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        python-version: "3.11"
+        environment-file: cpu_env.yaml
+        activate-environment: cpu-hpscnn-env
+        auto-activate-base: false
+
+    - name: Test with pytest
+      run: pytest test/
+      shell: bash -l {0}

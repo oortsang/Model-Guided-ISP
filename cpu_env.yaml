@@ -1,0 +1,25 @@
+# Note: intended for github actions
+name: cpu-hpscnn-env
+channels:
+  - defaults
+dependencies:
+  - python==3.11 # ==3.10.8
+  - jupyter
+  - pandas
+  - numpy
+  - scipy
+  - h5py
+  - numba
+  - matplotlib
+  - pytest
+  - ipykernel
+  - pip
+  - pip:
+      - wandb
+      - jax[cpu]==0.10.2 # ==0.6.0
+      - jaxhps
+      - --extra-index-url https://download.pytorch.org/whl/cpu
+      - torch==2.9.1
+      - torchvision
+      - tqdm
+      - git+https://github.com/oortsang/badger-modified.git

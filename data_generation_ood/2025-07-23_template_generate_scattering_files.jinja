@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --partition={{ partition }}
+#SBATCH --mem={{ mem }}
+#SBATCH --gpus={{num_gpu}}
+#SBATCH --gres=gpu:{{num_gpu}}
+#SBATCH --cpus-per-task={{num_cpu}}
+#SBATCH --output={{ logs_folder }}/{{ job_name }}.out
+#SBATCH --error={{ logs_folder }}/{{ job_name }}.err
+#SBATCH --exclude={{ exclude_gpu }}
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+echo "    CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+which python
+
+{{ command }} \
+{{ n_samples }} \
+{{ n_pixels }} \
+{{ contrast }} \
+{{ output_fp }} \
+{{ background_max_radius }} \
+{{ background_max_freq }} \
+{{ spatial_domain_max }} \
+{{ gaussian_lpf_param }} \
+{{ n_shapes }} \
+{{ no_filtering }} \
+{{ rho_max }} \
+{{ seed }} \
+{{ wandb_entity }} \
+{{ wandb_project }} \
+{{ wandb_mode }}
+

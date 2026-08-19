@@ -1,0 +1,130 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --partition={{ partition }}
+#SBATCH --gpus={{ num_gpu }}
+#SBATCH --cpus-per-task={{ num_cpu }}
+#SBATCH --mem={{ mem }}
+#SBATCH --nodes={{ num_nodes }}
+#SBATCH --time={{ job_walltime }}
+#SBATCH --output={{ log_dir }}/{{ log_name }}.out
+#SBATCH --error={{ log_dir }}/{{ log_name }}.err
+#SBATCH --exclude={{ exclude_node }}
+#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-user={{ mail_user }}
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+echo "    CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+which python
+nvidia-smi -L
+>&2 nvidia-smi -L
+
+# Things to add to the badger file...
+# File-system-related
+#   command
+#   rlc_repo
+#   data_input_nus
+#   ref_dataset_dir
+# - input_pred_scobj_dir
+# - input_pred_mmg_dir
+# - central_summary_fp
+# - central_model_weights_dir
+# - train_results_fp
+# - model_weights_dir
+# - output_pred_save (not a directory but controls whether output_eval_dir is used)
+# - output_pred_dir
+
+# Data settings
+#   truncate_num_train
+#   truncate_num_val
+#   train_targets
+#   log_train_subset_frac
+#   log_batch_size
+#   noise_to_signal_ratio
+#   seed
+# Archictecture
+#   n_cnn_layers_2d
+#   n_cnn_channels_2d
+#   kernel_size_2d
+# Optimization
+#   n_epochs
+#   n_epochs_per_log
+#   lr_decrease_factor
+#   freq_lvl
+#   batch_size
+#   weight_decay_base
+#   lr_init_base
+#   eta_min_base
+# Misc
+#   debug
+#   save_all_model_weights
+#   selection_field
+#   selection_mode
+#   wandb_entity
+#   wandb_project
+#   wandb_mode
+
+# Debugging...
+# {{n_cnn_layers_2d}}
+# {{n_cnn_channels_2d}}
+# {{kernel_size_2d}}
+# {{batch_size}}
+# {{lr_init_base}}
+# {{eta_min_base}}
+# {{weight_decay_base}}
+# {{model_hyperparams}}
+# {{model_extras}}
+# {{model_name}}
+# {{input_pred_scobj_dir}}
+# {{input_pred_mmg_dir}}
+
+{{ command }} \
+    {{ data_input_nus }} \
+    {{ ref_dataset_dir }} \
+    {{ input_pred_scobj_dir }} \
+    {{ input_pred_mmg_dir }} \
+    {{ train_results_fp }} \
+    {{ model_weights_dir }} \
+    {{ central_summary_fp }} \
+    {{ central_model_dir }} \
+    {{ central_model_format }} \
+    {{ num_train }} \
+    {{ num_val }} \
+    {{ num_test }} \
+    {{ seed }} \
+    {{ use_noise_seed }} \
+    {{ noise_seed_train }} \
+    {{ noise_seed_val }} \
+    {{ noise_seed_test }} \
+    {{ train_targets }} \
+    {{ noise_to_signal_ratio }} \
+    {{ log_train_subset_frac }} \
+    {{ log_batch_size }} \
+    {{ n_cnn_layers_2d }} \
+    {{ n_cnn_channels_2d }} \
+    {{ kernel_size_2d }} \
+    {{ learn_cnn_scale }} \
+    {{ init_cnn_scale }} \
+    {{ batch_size }} \
+    {{ n_epochs }} \
+    {{ n_epochs_per_log }} \
+    {{ lr_decrease_factor }} \
+    {{ freq_lvl }} \
+    {{ freq_idx }} \
+    {{ weight_decay_base }} \
+    {{ lr_init_base }} \
+    {{ eta_min_base }} \
+    {{ debug }} \
+    {{ save_all_model_weights }} \
+    {{ selection_field }} \
+    {{ selection_mode }} \
+    {{ output_pred_save }} \
+    {{ output_pred_dir }} \
+    {{ output_pred_shard_size }} \
+    {{ wandb_entity }} \
+    {{ wandb_project }} \
+    {{ wandb_mode }}
+
+>&2 echo "Exiting training script"

@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --partition={{ partition }}
+#SBATCH --gpus={{ num_gpu }}
+#SBATCH --cpus-per-task={{ num_cpu }}
+#SBATCH --mem={{ mem }}
+#SBATCH --nodes={{ num_nodes }}
+#SBATCH --time={{ job_walltime }}
+#SBATCH --output={{ log_dir }}/{{ log_name }}.out
+#SBATCH --error={{ log_dir }}/{{ log_name }}.err
+#SBATCH --exclude={{ exclude_node }}
+#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-user={{ mail_user }}
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+echo "    CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+which python
+nvidia-smi -L
+
+
+{{ command }} \
+    {{ input_scobj_fp }} \
+    {{ input_meas_dir }} \
+    {{ output_fp }} \
+    {{ nu_source_freq }} \
+    {{ hps_l }} \
+    {{ hps_p }} \
+    {{ hps_comp_domain_factor }} \
+    {{ hps_sd_mat_dir }} \
+    {{ receiver_radius }} \
+    {{ start_idx }} \
+    {{ use_noise_seed }} \
+    {{ noise_seed }} \
+    {{ noise_to_signal_ratio }} \
+    {{ write_every_n }} \
+    {{ debug }} \
+    {{ wandb_entity }} \
+    {{ wandb_project }} \
+    {{ wandb_mode }}
+
+echo "Exiting"

@@ -5,14 +5,16 @@ Written by [Olivia Tsang](http://github.com/oortsang), [Owen Melia](https://meli
 
 This code repository was written jointly by Olivia Tsang and Owen Melia, adapted from the [MFISNets repository](https://github.com/meliao/mfisnets) for our previous paper on [neural networks using multi-frequency progressive refinement](https://arxiv.org/abs/2405.13214) built using the [`jaxhps`](https://github.com/meliao/jaxhps) solver.
 The repository is focused on a model-guided neural network, HPS-CNN, which seeks to achieve fast, high-quality reconstructions by incorporating physical knowledge of the forward model with prior knowledge of the target scattering potentials. The architecture involves an alternating sequence of learned components (an initial FYNet block, proposed by [Fan and Ying (2022)](https://doi.org/10.4310/AMSA.2022.v7.n1.a2), and 2D CNNs later on) and calls to a numerical PDE solver (HPS, see [Melia et al. (2026)](https://doi.org/10.1016/j.jcp.2025.114549) for details).
-Additionally, this repository contains a custom implementation of the recursive linearization algorithm as a classical, non-machine-learning baseline ([Chen (1995)](https://www.cs.yale.edu/publications/techreports/tr1088.pdf), [Borges et al. (2017)](16M1093562)).
+Additionally, this repository contains a custom implementation of the recursive linearization algorithm as a classical, non-machine-learning baseline ([Chen, 1995](https://www.cs.yale.edu/publications/techreports/tr1088.pdf); [Borges et al., 2017](16M1093562)).
 
 The inverse scattering problem is a computationally challenging reconstruction task in wave-based imaging. In addition to enabling real-world applications---like medical imaging, remote sensing, and non-destructive testing---the inverse scattering problem is interesting to study as a classic example of an ill-posed, nonlinear inverse problem. The goal is to image the interior of an object based on how waves (e.g., acoustic or electromagnetic) traveling through the object get scattered. We focus on the multi-frequency setting, depicted below, where we have access to scattered wave measurements taken using incident waves of multiple frequencies.
+
 ![Inverse scattering problem setup](.github/assets/hpscnn-assets/inverse_scattering_setup.svg)
 
 In the paper, we develop a method that recovers high-quality reconstructions orders of magnitude more quickly than classical baselines. To this end, we embed a forward model--as a differential PDE solver--into a neural network architecture. This strategy leverages both physical knowledge of the wave scattering model and prior knowledge of imaging targets learned from training data.
 
 Our proposed architecture, HPS-CNN, is illustrated below. It produces an initial estimate from low-frequency measurements, using FYNet, and progressively refines the estimate using data of increasing frequencies. In particular, each refinement step involves both a fixed, physics-based component, and a learned neural network. We use a Hierarchical Poincar\'e-Steklov (HPS) numerical PDE solver for the physics-based component and a 2D CNN for the learned component:
+
 ![Architecture of the HPS-CNN Refinement block](.github/assets/hpscnn-assets/hpscnn_architecture_both.svg)
 
 ## Repository overview
@@ -139,12 +141,12 @@ If this code is helpful to your research, please cite our pre-print (and stay tu
 
 ```
 @misc{tsang2025modelguidedneuralnetworkmethod,
-    title={A Model-Guided Neural Network Method for the Inverse Scattering Problem}, 
+    title={A Model-Guided Neural Network Method for the Inverse Scattering Problem},
     author={Olivia Tsang and Owen Melia and Vasileios Charisopoulos and Jeremy Hoskins and Yuehaw Khoo and Rebecca Willett},
     year={2025},
     eprint={2512.10123},
     archivePrefix={arXiv},
     primaryClass={physics.comp-ph},
-    url={https://arxiv.org/abs/2512.10123}, 
+    url={https://arxiv.org/abs/2512.10123},
 }
 ```

@@ -67,6 +67,14 @@ except:
 FMT = "%(asctime)s:generate-data: %(levelname)s - %(message)s"
 TIMEFMT = "%Y-%m-%d %H:%M:%S"
 
+def wandb_entity_arg_type(value: str):
+    """argparse type for --wandb_entity: treat "none"/"null" (any case) as
+    no entity, so wandb.init() falls back to the caller's own default entity
+    """
+    if value is None or value.strip().lower() in ("none", "null"):
+        return None
+    return value
+
 def setup_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
@@ -134,7 +142,7 @@ def setup_args() -> argparse.Namespace:
     parser.add_argument("--write_every_n", type=int, default=1)
     parser.add_argument("--debug", default=False, action="store_true")
     parser.add_argument("--no_filtering", default=False, action="store_true")
-    parser.add_argument("--wandb_entity")
+    parser.add_argument("--wandb_entity", type=wandb_entity_arg_type, default=None, help="The W&B entity")
     parser.add_argument("--wandb_project")
     parser.add_argument(
         "--wandb_mode", choices=["offline", "online"], default="offline"

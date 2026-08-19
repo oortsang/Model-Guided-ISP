@@ -1,0 +1,225 @@
+---
+definitions:
+  command: python select_hyperparameter_from_runs.py
+  template: "<<rlc-repo>>/<<base-template-eval-mpsr=pipeline_templates/base_template_eval_mmgublock.jinja>>"
+
+  copy_to_item: true
+
+  default_arguments:
+    log_dir: <<logs-rel-dir=logs/eval_pde_refinement>>
+    partition: <<partition="gpu">>
+    num_nodes: 1
+    num_gpu: <<num-gpu>>
+    num_cpu: <<num-cpu>>
+    exclude_node: <<exclude-node="">>
+    mem: <<mem="40G">>
+    job_walltime: "<<time-limit=0:15:00>>"
+    mail_type: <<mail-type>>
+    mail_user: <<mail-user="">>
+
+    command_2: python eval_MFISNet_Fused.py
+    evaluate_best_hyperparams: "true"
+
+  submission:
+    !SLURMQueue
+      jobs_folder: <<jobs-rel-dir=jobs/train_pde_refinement>>
+      job_name_key: model_name
+      fake_submission: <<badger-fake-submission=false>>
+      overwrite_scripts: <<badger-overwrite-scripts=false>>
+
+  constants:
+    base_dir: &BASE_DIR "<<rlc-repo>>"
+    ref_dataset_dir: &REF_DATASET_DIR "<<rlc-repo>>/<<dataset-rel-dir=dataset>>"
+    results_dir: &RESULTS_DIR "<<rlc-repo>>/\
+      <<results-rel-dir=rlc_data/results/mpsr>>"
+    models_dir_base: &MODELS_DIR_BASE "<<rlc-repo>>/\
+      <<models-rel-dir=rlc_data/models/mpsr>>"
+    predictions_dir: &PREDICTIONS_DIR_BASE "<<rlc-repo>>/\
+      <<predictions-rel-dir=rlc_data/mmg_pipeline/predictions>>"
+    predictions_input_name:  &PREDICTIONS_INPUT_NAME "<<predictions-input-name>>"
+
+    num_train: &NUM_TRAIN "<<num-train=5000>>"
+    num_val:   &NUM_VAL   "<<num-val=5000>>"
+    num_test:  &NUM_TEST  "<<num-test=5000>>"
+
+
+arguments:
+  ### Stuff to make the constants available ###
+  - !Scalar
+    name: model_date
+    value: "<<run-date>>"
+    metadata_rules: [ !SaveValueInMetadata { path: model_date } ]
+  - !Scalar
+    name: run_date
+    value: "<<run-date>>"
+    metadata_rules: [ !SaveValueInMetadata { path: run_date } ]
+
+  - !Scalar { name: base_dir, value: *BASE_DIR }
+  - !Scalar { name: ref_dataset_dir, value: *REF_DATASET_DIR }
+  - !Scalar { name: predictions_dir_base, value: *PREDICTIONS_DIR_BASE }
+  - !Scalar { name: predictions_input_name, value: *PREDICTIONS_INPUT_NAME }
+  - !Scalar { name: results_dir, value: *RESULTS_DIR }
+  - !Scalar { name: models_dir_base, value: *MODELS_DIR_BASE }
+
+  # Extras from the config file
+  - !Scalar { name: fetch_result_command, value: "python fetch_result_entry.py" }
+  - !Scalar { name: central_results_fp, value: "<<central-results-fp>>" }
+  - !Scalar { name: central_model_dir, value: "<<central-model-dir>>" }
+  - !Scalar { name: central_model_format, value: "<<central-model-format>>" }
+  - !Scalar { name: freq_idx, value: <<fi>> }
+  - !Scalar { name: level_type, value: <<level-type>> }
+  - !Scalar { name: whole_run_name, value: <<whole-run-name>> }
+
+  # Space management...
+  - !Scalar { name: delete_unused_models, value: "<<delete-unused-models=false>>" }
+
+  ##################### Actual arguments #####################
+  ### More-or-less fixed arguments ###
+  - !Scalar { name: selection_mode, value: <<selection-mode=min>> }
+  - !Scalar { name: verbosity_level, value: <<verbosity-level="1">> }
+  # This is just for the evaluation process but not selection of the parameters
+
+  ## Arguments for the evaluation portion
+  - !Scalar { name: samples_per_chunk, value: <<samples-per-chunk=250>>, prefix: "--samples_per_chunk" }
+  - !Scalar { name: eval_batch_size, value: <<eval-batch-size=100>>, prefix: "--batch_size" }
+  - !Scalar { name: debug, value:"", prefix: "--debug" }
+  - !Scalar { name: use_pred_d_mh, value: '<<use-pred-d-mh=true>>', prefix: "--use_pred_d_mh" }
+
+  - !Scalar { name: truncate_num_train, value: *NUM_TRAIN, prefix: "--truncate_num"}
+  - !Scalar { name: truncate_num_val,   value: *NUM_VAL,   prefix: "--truncate_num"}
+  - !Scalar { name: truncate_num_test,  value: *NUM_TEST,  prefix: "--truncate_num"}
+
+  # Handle the train targets here
+  - !Range
+    name: train_targets
+    values: [ <<train-targets="smoothed", "original">> ]
+    metadata_rules: [ !SaveValueInMetadata {path: train_targets} ]
+
+  # Use the potentially-smoothed targets here
+  - !ArgumentFromMetadata
+    name: selection_field_name
+    format_rule: "<<field-name=eval_final_rel_l2>>"
+    sources: [ {path: train_targets, destination: tt} ]
+
+  - !Range
+    name: eval_targets
+    values: [ <<eval-targets="smoothed", "original">> ]
+    metadata_rules: [ !SaveValueInMetadata {path: eval_targets} ]
+
+  - !ArgumentFromMetadata
+    name: use_which_targets
+    format_rule: "--use_{eval_targets}_targets"
+    sources: [ {path: eval_targets, destination: eval_targets} ]
+    metadata_rules: [ !SaveValueInMetadata {path: use_which_targets} ]
+
+  ### nu / source frequency inputs ###
+  - !Range
+    name: data_input_nus
+    values: [ <<nu-sf="4">> ]
+    metadata_rules: [ !SaveValueInMetadata { path: data_input_nus } ]
+
+  - !ArgumentFromMetadata
+    name: data_input_nus_arg
+    prefix: "--data_input_nus"
+    format_rule: "{data_input_nus}"
+    sources: [
+      {path: data_input_nus, destination: data_input_nus}
+    ]
+
+  # Seeding for random noise
+  - !Scalar { name: seed, value: <<eval-seed=1001>>, prefix: "--seed" }
+  # Noise level
+  - !Range
+    name: noise_to_signal_ratio
+    values: [ "<<noise-level=0>>" ]
+    prefix: "--noise_to_signal_ratio"
+    metadata_rules: [ !SaveValueInMetadata { path: noise_to_signal_ratio } ]
+
+  # Set up noise seeds
+  - !Scalar
+    name: use_noise_seed
+    value: "<<use-noise-seed=true>>"
+    prefix: "--use_noise_seed"
+  - !Scalar
+    name: noise_seed_train
+    value: "$((<<noise-seed-train>>))"
+    prefix: "--noise_seed"
+  - !Scalar
+    name: noise_seed_val
+    value: "$((<<noise-seed-val>>))"
+    prefix: "--noise_seed"
+  - !Scalar
+    name: noise_seed_test
+    value: "$((<<noise-seed-test>>))"
+    prefix: "--noise_seed"
+
+  ##################### Job+Model Names #####################
+
+  - !ArgumentFromMetadata
+    name: output_common_name
+    format_rule: "<<output-common-name-format>>"
+    sources: [
+      { path: run_date, destination: run_date },
+      { path: data_input_nus, destination: nus },
+      { path: noise_to_signal_ratio, destination: ntsr },
+      { path: train_targets, destination: tt },
+      { path: eval_targets,  destination: et },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: output_common_name } ]
+
+  - !ArgumentFromMetadata
+      name: predictions_output_name
+      # Note: set this in the main config file
+      format_rule: "<<predictions-output-name-format>>"
+      sources: [
+        { path: model_date,            destination: model_date },
+        { path: run_date,              destination: run_date },
+        { path: data_input_nus,        destination: nus },
+        { path: noise_to_signal_ratio, destination: ntsr },
+        { path: train_targets,         destination: tt },
+        { path: eval_targets,          destination: et },
+      ]
+      metadata_rules: [ !SaveValueInMetadata { path: predictions_output_name } ]
+
+  - !ArgumentFromMetadata
+    name: model_name
+    format_rule: "{output_common_name}"
+    sources: [ {path: output_common_name, destination: output_common_name} ]
+    metadata_rules: [ !SaveValueInMetadata { path: model_name } ]
+
+  - !ArgumentFromMetadata
+      name: results_file_pattern
+      # Note: set this in the main config file
+      format_rule: "<<results-file-pattern-format>>"
+      sources: [
+        { path: model_date,            destination: model_date },
+        { path: run_date,              destination: run_date },
+        { path: data_input_nus,        destination: nus },
+        { path: noise_to_signal_ratio, destination: ntsr },
+        { path: train_targets,         destination: tt },
+        { path: eval_targets,          destination: et },
+      ]
+      metadata_rules: [ !SaveValueInMetadata { path: results_file_pattern } ]
+
+  - !ArgumentFromMetadata
+    name: log_filename
+    format_rule: "{output_common_name}"
+    sources: [
+      # {path: model_name, destination: model_name},
+      { path: output_common_name, destination: output_common_name },
+      # { path: run_date, destination: run_date },
+      # { path: data_input_nus, destination: nus },
+      # { path: train_targets, destination: tt },
+      # { path: eval_targets,  destination: et },
+    ]
+
+  # Just for display in slurm so push the important info earlier
+  - !ArgumentFromMetadata
+    name: job_name
+    format_rule: "{nus}:{output_common_name}"
+    sources: [
+      # {path: run_date, destination: run_date},
+      { path: data_input_nus, destination: nus },
+      { path: output_common_name, destination: output_common_name },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: job_name } ]

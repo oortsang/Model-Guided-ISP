@@ -1,0 +1,319 @@
+---
+definitions:
+  command: python train_MFISNet_pde_solver_refinement_v1.py
+  template: "<<rlc-repo>>/<<base-template-train-mpsr=pipeline_templates/base_template_train_mpsr.jinja>>"
+
+  copy_to_item: true
+
+  default_arguments:
+    log_dir: <<logs-rel-dir=logs/train_pde_refinement>>
+    partition: <<partition="gpu">>
+    num_nodes: 1
+    num_gpu: <<num-gpu=1>>
+    num_cpu: <<num-cpu=4>>
+    exclude_node: <<exclude-node="">>
+    mem: <<mem="50G">>
+    job_walltime: "<<time-limit=3:00:00>>"
+    mail_type: <<mail-type>>
+    mail_user: <<mail-user="">>
+
+  submission:
+    !SLURMQueue
+      jobs_folder: <<jobs-rel-dir=jobs/train_pde_refinement>>
+      job_name_key: model_name
+      fake_submission: <<badger-fake-submission=false>>
+      overwrite_scripts: <<badger-overwrite-scripts=false>>
+
+  constants:
+    base_dir: &BASE_DIR "<<rlc-repo>>"
+    ref_dataset_dir: &REF_DATASET_DIR "<<rlc-repo>>/<<dataset-rel-dir=dataset>>"
+    results_dir: &RESULTS_DIR "<<rlc-repo>>/<<results-rel-dir=rlc_data/results>>"
+    models_dir_base: &MODELS_DIR_BASE "<<rlc-repo>>/<<models-rel-dir=rlc_data/models>>"
+    predictions_dir_base: &PREDICTIONS_DIR_BASE "<<rlc-repo>>/<<predictions-rel-dir>>"
+    predictions_input_name: &PREDICTIONS_INPUT_NAME "<<predictions-input-name>>"
+
+    # Don't do any N_freqs adjustment for the truncate_num_const
+    num_train_const: &NUM_TRAIN_CONST <<num-train=100>>
+    num_val_const:   &NUM_VAL_CONST   <<num-val=1000>>
+    num_test_const:  &NUM_TEST_CONST  <<num-test=1000>>
+
+arguments:
+  ### Stuff to make the constants available ###
+  - !Scalar
+    name: run_date
+    value: "<<run-date>>"
+    metadata_rules: [ !SaveValueInMetadata { path: run_date } ]
+  - !Scalar
+    name: num_train
+    value: *NUM_TRAIN_CONST
+    metadata_rules: [ !SaveValueInMetadata { path: num_train } ]
+  - !Scalar
+    name: num_val
+    value: *NUM_VAL_CONST
+  - !Scalar
+    name: num_test
+    value: *NUM_TEST_CONST
+
+  # - !Scalar { name: base_dir, value: *BASE_DIR }
+  - !Scalar { name: ref_dataset_dir, value: *REF_DATASET_DIR }
+  - !Scalar { name: predictions_dir_base, value: *PREDICTIONS_DIR_BASE }
+  - !Scalar { name: predictions_input_name, value: *PREDICTIONS_INPUT_NAME }
+  - !Scalar { name: results_dir, value: *RESULTS_DIR }
+  - !Scalar { name: models_dir_base, value: *MODELS_DIR_BASE }
+
+  #####################           Actual arguments           #####################
+  ### More-or-less fixed arguments ###
+  - !Scalar { name: seed, value: <<seed=35675>>, prefix: "--seed" }
+  # - !Scalar { name: n_cnn_1d, value: <<n-cnn-1d=3>>, prefix: "--n_cnn_1d" }
+  # - !Scalar { name: n_cnn_2d, value: <<n-cnn-2d=3>>, prefix: "--n_cnn_2d" }
+  - !Scalar { name: init_scale, value: "", prefix: "--big_init" }
+  - !Scalar { name: mmfc, value: "true", prefix: "--merge_middle_freq_channels" }
+  - !Scalar { name: polar_padding, value: "true", prefix: "--polar_padding" }
+  - !Scalar { name: n_epochs, value: <<num-epochs=100>>, prefix: "--n_epochs" }
+  - !Scalar { name: n_epochs_per_log, value: <<num-epochs-per-log=5>>, prefix: "--n_epochs_per_log" }
+  - !Scalar { name: debug, value: "", prefix: "--debug" }
+  - !Scalar { name: use_pred_d_mh, value: '<<use-pred-d-mh=true>>', prefix: "--use_pred_d_mh" }
+
+  ### Weights and Biases settings ###
+  - !Scalar
+    name: wandb_entity
+    prefix: "--wandb_entity"
+    value: "<<wandb-entity=recursive-linearization>>"
+  - !Scalar
+    name: wandb_project
+    prefix: "--wandb_project"
+    value: "<<wandb-project=2024-10-13_mpsr_more_freqs>>"
+  - !Scalar { name: wandb_mode, value: "<<wandb-mode=online>>", prefix: "--wandb_mode" }
+
+  # Handle the train targets here
+  - !Range
+    name: train_targets
+    values: [ <<train-targets="smoothed", "original">> ]
+    metadata_rules: [ !SaveValueInMetadata {path: train_targets} ]
+
+  # - !ArgumentFromMetadata
+  #   name: use_which_targets
+  #   format_rule: "--use_{train_targets}_targets"
+  #   sources: [ {path: train_targets, destination: train_targets} ]
+  #   metadata_rules: [ !SaveValueInMetadata {path: use_which_targets} ]
+
+  - !ArgumentFromMetadata
+    name: use_which_targets
+    format_rule: "{train_targets}"
+    prefix: "--use_targets"
+    sources: [ {path: train_targets, destination: train_targets} ]
+    metadata_rules: [ !SaveValueInMetadata {path: use_which_targets} ]
+
+  ### Data setting: nu / source frequency inputs and noise level ###
+  - !Range
+    name: data_input_nus
+    values: [ "<<nu-sf>>" ]
+    metadata_rules: [ !SaveValueInMetadata { path: data_input_nus } ]
+
+  # Noise level
+  - !Range
+    name: noise_to_signal_ratio
+    values: [ "<<noise-level=0>>" ]
+    prefix: "--noise_to_signal_ratio"
+    metadata_rules: [ !SaveValueInMetadata { path: noise_to_signal_ratio } ]
+
+  # Set up noise seeds
+  - !Scalar
+    name: use_noise_seed
+    value: "<<use-noise-seed=true>>"
+    prefix: "--use_noise_seed"
+  - !Scalar
+    name: noise_seed_train
+    value: "$((<<noise-seed-train>>))"
+    prefix: "--noise_seed_train"
+  - !Scalar
+    name: noise_seed_val
+    value: "$((<<noise-seed-val>>))"
+    prefix: "--noise_seed_val"
+
+
+  ############### Hyperparameter Optimization ###############
+  ### Architecture hyperparameters ###
+  - !Range
+    name: set_c1d_per_freq
+    prefix: "--set_c1d_per_freq"
+    values: [ <<set-c1d-per-freq="false">> ]
+    metadata_rules: [ !SaveValueInMetadata { path: set_c1d_per_freq } ]
+
+  - !Range
+    name: n_cnn_1d
+    prefix: "--n_cnn_1d"
+    values: [ <<n-cnn-1d=24>> ]
+    metadata_rules: [ !SaveValueInMetadata { path: n_cnn_1d } ]
+
+  - !Range
+    name: n_cnn_2d
+    prefix: "--n_cnn_2d"
+    values: [ <<n-cnn-2d=24>> ]
+    metadata_rules: [ !SaveValueInMetadata { path: n_cnn_2d } ]
+
+
+  - !Range
+    name: n_cnn_channels_1d
+    prefix: "--n_cnn_channels_1d"
+    values: [ <<n-cnn-channels-1d=12, 24, 36, 24>> ]
+    metadata_rules: [ !SaveValueInMetadata { path: n_cnn_channels_1d } ]
+
+  - !Range
+    name: n_cnn_channels_2d
+    prefix: "--n_cnn_channels_2d"
+    values: [ <<n-cnn-channels-2d=24>> ]
+    metadata_rules: [ !SaveValueInMetadata { path: n_cnn_channels_2d } ]
+
+  - !Range
+    name: kernel_size_1d
+    prefix: "--kernel_size_1d"
+    values: [ <<kernel-size-1d=20, 40>> ]
+    metadata_rules: [ !SaveValueInMetadata { path: kernel_size_1d } ]
+
+  - !Range
+    name: kernel_size_2d
+    prefix: "--kernel_size_2d"
+    values: [ <<kernel-size-2d=5, 7>> ]
+    metadata_rules: [ !SaveValueInMetadata { path: kernel_size_2d } ]
+
+  - !Range
+    name: use_cnns_2d
+    prefix: "--use_cnns_2d"
+    values: [ <<use-cnns-2d="update">> ]
+    metadata_rules: [ !SaveValueInMetadata { path: use_cnns_2d } ]
+
+  - !Scalar
+    name: embedding_mode
+    prefix: --embedding_mode
+    value: <<embedding-mode="none">>
+    metadata_rules: [ !SaveValueInMetadata { path: embedding_mode_channels_out } ]
+
+  - !Range
+    name: n_emb_channels_out
+    prefix: --n_emb_channels_out
+    values: [ <<n-emb-channels-out="0">> ]
+    metadata_rules: [ !SaveValueInMetadata { path: n_emb_channels_out } ]
+
+
+  ### Optimization hyperparameters ###
+  - !Scalar { name: batch_size, value: <<batch-size=16>>, prefix: "--batch_size" }
+
+  - !Range
+    name: weight_decay
+    prefix: "--weight_decay"
+    values: [ <<weight-decay="1e-3">> ]
+    metadata_rules: [ !SaveValueInMetadata { path: weight_decay } ]
+
+  - !Range
+    name: lr_init
+    prefix: "--lr_init"
+    values: [ <<lr-init="5e-4", "1e-3">> ]
+    metadata_rules: [ !SaveValueInMetadata { path: lr_init } ]
+
+  - !Range
+    name: lr_decrease_factor
+    prefix: "--lr_decrease_factor"
+    values: [ <<lr-decrease-factor="0.5">> ]
+    metadata_rules: [!SaveValueInMetadata {path: lr_decrease_factor}]
+
+  - !Scalar { name: freq_lvl, value: <<fi=1>>, prefix: "--freq_lvl" }
+
+
+  # Set eta_min=lr_init so it's a constant learning rate
+  - !ArgumentFromMetadata
+    name: eta_min
+    prefix: "--eta_min"
+    # format_rule: "{lr_init}"
+    format_rule: <<eta-min-format-rule="{lr_init}">>
+    sources: [
+      {path: lr_init, destination: lr_init},
+    ]
+    meta_data_rules: [ !SaveValueInMetadata { path: eta_min } ]
+
+  - !Range
+    name: init_mode
+    prefix: "--init_mode"
+    values: [ <<init-mode="original">> ]
+    metadata_rules: [ !SaveValueInMetadata { path: init_mode } ]
+
+  ##################### Job+Model Names (uses previous args) #####################
+  - !Scalar
+    name: base_model_name
+    value: "<<level-base-name>>"
+    metadata_rules: [ !SaveValueInMetadata { path: base_model_name } ]
+
+  - !ArgumentFromMetadata
+    name: model_name
+    # format_rule: "{run_date}_{base_model_name}_nus_{nus}_noise_{ntsr}_\
+    #   arch_{sc1pf}_{ncc1d}_{ncc2d}_{k1d}_{k2d}_{uc2d}_\
+    #   opt_{lr}_{wd}_{im}"
+    format_rule: "<<mpsr-model-name-format>>"
+    sources: [
+      # Run date and Data setting
+      { path: run_date,              destination: run_date },
+      { path: train_targets,         destination: tt },
+      { path: base_model_name,       destination: base_model_name },
+      { path: data_input_nus,        destination: nus },
+      { path: noise_to_signal_ratio, destination: ntsr },
+      { path: num_train,             destination: ntrain },
+
+      # Architecture Hyperparameters
+      { path: set_c1d_per_freq,  destination: sc1pf },
+      { path: n_cnn_1d, destination: nlc1d },
+      { path: n_cnn_2d, destination: nlc2d },
+      { path: n_cnn_channels_1d, destination: ncc1d },
+      { path: n_cnn_channels_2d, destination: ncc2d },
+      { path: kernel_size_1d,    destination: k1d },
+      { path: kernel_size_2d,    destination: k2d },
+      { path: use_cnns_2d,       destination: uc2d },
+      { path: n_emb_channels_out, destination: neco },
+
+      # Optimization Hyperparameters
+      { path: lr_init,      destination: lr },
+      { path: weight_decay, destination: wd },
+      { path: init_mode,    destination: im },
+      { path: lr_decrease_factor,      destination: lrdf },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: model_name } ]
+
+  - !ArgumentFromMetadata
+    name: log_filename
+    format_rule: "{model_name}"
+    sources: [
+      {path: model_name, destination: model_name},
+    ]
+
+  - !ArgumentFromMetadata
+    name: job_name
+    # format_rule: "arch_{sc1pf}_{ncc1d}_{ncc2d}_{k1d}_{k2d}_{uc2d}_\
+    #   opt_{lr}_{wd}_{im}_{lrdf};
+    #   {run_date}_{base_model_name}_nus_{nus}_noise_{ntsr}..."
+    format_rule: "<<job-name-format>>"
+    sources: [
+      # Run date and Data setting
+      { path: run_date,              destination: run_date },
+      { path: train_targets,         destination: tt },
+      { path: base_model_name,       destination: base_model_name },
+      { path: data_input_nus,        destination: nus },
+      { path: noise_to_signal_ratio, destination: ntsr },
+      { path: num_train,             destination: ntrain },
+
+      # Architecture Hyperparameters
+      { path: set_c1d_per_freq,  destination: sc1pf },
+      { path: n_cnn_1d, destination: nlc1d },
+      { path: n_cnn_2d, destination: nlc2d },
+      { path: n_cnn_channels_1d, destination: ncc1d },
+      { path: n_cnn_channels_2d, destination: ncc2d },
+      { path: kernel_size_1d,    destination: k1d },
+      { path: kernel_size_2d,    destination: k2d },
+      { path: use_cnns_2d,       destination: uc2d },
+      { path: n_emb_channels_out, destination: neco },
+
+      # Optimization Hyperparameters
+      { path: lr_init,      destination: lr },
+      { path: weight_decay, destination: wd },
+      { path: init_mode,    destination: im },
+      { path: lr_decrease_factor,      destination: lrdf },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: job_name } ]

@@ -96,6 +96,14 @@ from src.utils.logging_utils import (
     hash_dict
 )
 
+def wandb_entity_arg_type(value: str):
+    """argparse type for --wandb_entity: treat "none"/"null" (any case) as
+    no entity, so wandb.init() falls back to the caller's own default entity
+    """
+    if value is None or value.strip().lower() in ("none", "null"):
+        return None
+    return value
+
 def setup_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     bool_choices = ["true", "false"]
@@ -230,7 +238,7 @@ def setup_args() -> argparse.Namespace:
 
     # Weights and Biases setup
     parser.add_argument("--wandb_project", type=str, help="W&B project name")
-    parser.add_argument("--wandb_entity", type=str, help="The W&B entity")
+    parser.add_argument("--wandb_entity", type=wandb_entity_arg_type, default=None, help="The W&B entity")
     parser.add_argument(
         "--wandb_mode", choices=["offline", "online", "disabled"], default="offline"
     )

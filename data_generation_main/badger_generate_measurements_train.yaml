@@ -5,10 +5,6 @@
 # So, here we take an alternate approach: pass the chunk size
 # information and pre-compute what the files names will be...
 #
-# Local copy of dg_scripts/2025-07-23_yaml_template_generate_measurement_files.yaml,
-# self-contained within consolidated_dataset_generation/ so nothing here
-# references dg_scripts.
-#
 # 2026-08-05: switched from passing a single --input_fp (one scattering-object
 # file per measurement job) to --input_dir/--global_idx_start/--global_n_samples
 # (generate_measurement_files.py reads a global sample-index slice across
@@ -24,12 +20,12 @@
 definitions:
   command: python generate_measurement_files.py
   template: "/home-nfs/oortsang/rlc-repo/data_generation_main/\
-    base_template_generate_measurement_files.jinja"
+    template_generate_measurement_files.jinja"
 
   copy_to_item: true
 
   default_arguments:
-    log_dir: logs/consolidated_dataset_generation/
+    log_dir: logs/gen_data_main/
     partition: low-gpu,gpu
     num_nodes: 1
     num_gpu: 1
@@ -42,7 +38,7 @@ definitions:
 
   submission:
     !SLURMQueue
-      jobs_folder: jobs/consolidated_dataset_generation
+      jobs_folder: jobs/gen_data_main
       job_name_key: job_name
       fake_submission: false
       overwrite_scripts: true

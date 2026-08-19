@@ -1,0 +1,293 @@
+---
+definitions:
+  command: python train_MFISNet_Model_Pipeline_e2e.py
+  template: "<<rlc-repo>>/<<base-template-train-mpsr-pipe=base_template_train_mpsr_pipe.jinja>>"
+
+  copy_to_item: true
+
+  default_arguments:
+    log_dir: "<<rlc-repo>>/<<logs-rel-dir>>"
+    partition: <<partition="gpu">>
+    num_nodes: 1
+    num_gpu: <<num-gpu=1>>
+    num_cpu: <<num-cpu=4>>
+    exclude_node: <<exclude-node="">>
+    mem: <<mem="50G">>
+    job_walltime: "<<time-limit=8:00:00>>"
+    mail_type: <<mail-type="none">>
+    mail_user: <<mail-user>>
+
+  submission:
+    !SLURMQueue
+      jobs_folder: "<<rlc-repo>>/<<jobs-rel-dir>>"
+      job_name_key: e2e_model_name
+      fake_submission: <<badger-fake-submission=false>>
+      overwrite_scripts: <<badger-overwrite-scripts=true>>
+
+  constants:
+    base_dir: &BASE_DIR <<rlc-repo>>
+    ref_dataset_dir: &REF_DATASET_DIR "<<rlc-repo>>/<<dataset-rel-dir>>"
+    results_dir: &RESULTS_DIR "<<rlc-repo>>/<<results-rel-dir>>"
+    models_dir_base: &MODELS_DIR_BASE "<<rlc-repo>>/<<models-rel-dir>>"
+
+    # Currently, these numbers do not get altered by the number of frequencies
+    num_train_const: &NUM_TRAIN_CONST <<e2e-num-train=10000>>
+    num_val_const:   &NUM_VAL_CONST   <<e2e-num-val=1000>>
+    num_test_const:  &NUM_TEST_CONST  <<e2e-num-test=1000>>
+
+arguments:
+  ### Stuff to make the constants available ###
+  - !Scalar
+    name: e2e_date
+    value: <<e2e-date>>
+    metadata_rules: [ !SaveValueInMetadata { path: e2e_date } ]
+  - !Scalar
+    name: model_date
+    value: <<model-date>>
+    metadata_rules: [ !SaveValueInMetadata { path: model_date } ]
+  - !Scalar
+    name: num_train
+    value: *NUM_TRAIN_CONST
+    metadata_rules: [ !SaveValueInMetadata { path: num_train } ]
+  - !Scalar
+    name: num_val
+    value: *NUM_VAL_CONST
+  - !Scalar
+    name: num_test
+    value: *NUM_TEST_CONST
+
+  - !Scalar { name: base_dir, value: *BASE_DIR }
+  - !Scalar { name: ref_dataset_dir, value: *REF_DATASET_DIR }
+  - !Scalar { name: results_dir, value: *RESULTS_DIR }
+  - !Scalar { name: models_dir_base, value: *MODELS_DIR_BASE }
+
+  ### Select the input/output model names ###
+  # This should agree with whole-run-name from the mpsr_scripts configs
+  - !Scalar
+    name: base_model_name
+    value: <<base-model-name>>
+    # value: "mref_Nk_2_(1,8)_ntr_10000_dataset_1e-4_rho_max_0.575"
+    metadata_rules: [ !SaveValueInMetadata { path: base_model_name } ]
+
+  - !Scalar
+    name: data_input_nus
+    value: <<data-input-nus>>
+    # value: "(1,8)"
+    metadata_rules: [ !SaveValueInMetadata { path: data_input_nus } ]
+
+  # Organizational stuff
+  - !Scalar
+    name: in_central_results_fp
+    value: '"<<in-central-results-fp>>"'
+    prefix: "--in_central_results_fp"
+
+  # - !Scalar
+  #   name: e2e_model_fp_format
+  #   value: "<<e2e-model-fp-format>>"
+  #   prefix: "--e2e_model_fp_format"
+
+  #####################           Actual arguments           #####################
+
+  ### More-or-less fixed arguments ###
+  - !Scalar { name: seed, value: 98283, prefix: "--seed" }
+  - !Scalar { name: use_targets, value: "original", prefix: "--use_targets" }
+  - !Scalar
+    name: d_rs_loss_weight
+    value: "<<d-rs-loss-weight=0.0>>"
+    # value: "0.0"
+    prefix: "--d_rs_loss_weight"
+    metadata_rules: [ !SaveValueInMetadata { path: d_rs_loss_weight } ]
+
+  ### Logging settings ###
+  - !Scalar
+    name: log_train_subset_frac
+    value: <<e2e-log-train-subset-frac=0.1>>
+    prefix: "--log_train_subset_frac"
+  - !Scalar { name: n_batches_per_log, value: <<num-batches-per-log=100>>, prefix: "--n_batches_per_log" }
+  - !Scalar { name: n_epochs_per_log, value: <<num-epochs-per-log=5>>, prefix: "--n_epochs_per_log" }
+  - !Scalar { name: save_all_model_weights, value: "<<save-all-model-weights=false>>", prefix: "--save_all_model_weights" }
+  - !Scalar { name: selection_field, value: <<selection-field="eval_rel_l2">>, prefix: "--selection_field" }
+  - !Scalar { name: selection_mode, value: <<selection-mode="min">>, prefix: "--selection_mode" }
+  - !Scalar { name: wandb_entity, value: recursive-linearization, prefix: "--wandb_entity" }
+  - !Scalar { name: wandb_project, value: <<wandb-project=2025-02-12_pipeline_end_to_end_train>>, prefix: "--wandb_project" }
+  - !Scalar { name: wandb_mode, value: online, prefix: "--wandb_mode" }
+  - !Scalar { name: verbose_level, value: 1, prefix: "--verbose_level" }
+
+ ### Optimization arguments ###
+  - !Scalar
+    name: num_epochs
+    prefix: "--n_epochs"
+    value:  <<e2e-num-epochs=10>>
+    metadata_rules: [ !SaveValueInMetadata { path: num_epochs } ]
+
+  - !Range
+    name: batch_size
+    prefix: "--batch_size"
+    values: [ <<e2e-batch-size>> ]
+    metadata_rules: [ !SaveValueInMetadata { path: batch_size } ]
+
+  - !Range
+    name: lr_init
+    prefix: "--lr_init_base"
+    values: [ <<e2e-lr-init-base="1e-4", "3e-4">> ]
+    metadata_rules: [ !SaveValueInMetadata { path: lr_init } ]
+
+  # Set eta_min=lr_init so it's a constant learning rate
+  - !ArgumentFromMetadata
+    name: eta_min
+    prefix: "--eta_min"
+    # format_rule: "{lr_init}"
+    format_rule: <<e2e-eta-min-format-rule="{lr_init}">>
+    sources: [
+      {path: lr_init, destination: lr_init},
+    ]
+    meta_data_rules: [ !SaveValueInMetadata { path: eta_min } ]
+
+  - !Range
+    name: weight_decay
+    prefix: "--weight_decay_base"
+    values: [ <<e2e-weight-decay-base="5e-4", "1e-3">> ]
+    # values: [ "5e-4", "1e-3" ]
+    metadata_rules: [ !SaveValueInMetadata { path: weight_decay } ]
+
+  # Noise level
+  - !Range
+    name: noise_to_signal_ratio
+    # values: [ "0" ]
+    values: [ "<<noise-level=0>>" ]
+    prefix: "--noise_to_signal_ratio"
+    metadata_rules: [ !SaveValueInMetadata { path: noise_to_signal_ratio } ]
+
+  - !Scalar
+    name: use_noise_seed
+    value: "<<use-noise-seed=true>>"
+    prefix: "--use_noise_seed"
+
+  - !Scalar
+    name: noise_seed_list_train
+    value: "<<noise-seed-list-train>>"
+    prefix: "--noise_seed_list_train"
+  - !Scalar
+    name: noise_seed_list_val
+    value: "<<noise-seed-list-val>>"
+    prefix: "--noise_seed_list_val"
+
+  ### PDE solver settings ###
+  - !Scalar
+    name: solver_type
+    prefix: "--pde_solver_type"
+    value: <<pde-solver-type=hps>>
+    metadata_rules: [ !SaveValueInMetadata { path: pde_solver_type } ]
+
+  - !Scalar
+    name: hps_l
+    prefix: "--pde_hps_l"
+    value: <<hps-l=3>>
+    metadata_rules: [ !SaveValueInMetadata { path: hps_l } ]
+
+  - !Scalar
+    name: hps_p
+    prefix: "--pde_hps_p"
+    value: <<hps-p=16>>
+    metadata_rules: [ !SaveValueInMetadata { path: hps_p } ]
+
+  - !Scalar
+    name: hps_sd_mat_dir
+    prefix: "--pde_hps_sd_mat_dir"
+    value: "<<hps-sd-mat-dir=rlc_data/HPS_SD_matrices>>"
+    metadata_rules: [ !SaveValueInMetadata { path: hps_sd_mat_dir } ]
+
+  - !Scalar
+    name: jax_mem_alloc_mb
+    prefix: "--jax_mem_alloc_mb"
+    value: "<<jax-mem-alloc-mb=4096>>"
+    metadata_rules: [ !SaveValueInMetadata { path: jax_mem_alloc_mb } ]
+
+
+  ##################### Job+Model Names (uses previous args) #####################
+  - !ArgumentFromMetadata
+    name: e2e_model_name_prefix
+    # format_rule: "{e2e_date}_train_pipeline_e2e_{base_model_name}"
+    format_rule: "{e2e_date}_<<e2e-common-name>>"
+    sources: [
+      { path: e2e_date,         destination: e2e_date },
+      { path: base_model_name, destination: base_model_name },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: e2e_model_name_prefix } ]
+
+  - !ArgumentFromMetadata
+    name: e2e_model_name_details
+    # format_rule: "opt_{ne}_{bs}_{lr}_{wd}_ntsr_{ntsr}_loss_{drs}"
+    # format_rule: "opt_{ne}_{bs}_{lr}_{wd}"
+    format_rule: "<<e2e-model-name-details-format=opt_{ne}_{bs}_{lr}_{wd}_ntsr_{ntsr}>>"
+    sources: [
+      { path: num_epochs,        destination: ne },
+      { path: batch_size,        destination: bs },
+      { path: lr_init,           destination: lr },
+      { path: weight_decay,      destination: wd },
+      { path: noise_to_signal_ratio, destination: ntsr },
+      { path: d_rs_loss_weight,  destination: drs },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: e2e_model_name_details } ]
+
+
+  - !ArgumentFromMetadata
+    name: e2e_model_name
+    format_rule: "<<e2e-model-name-format={prefix}_{details}>>"
+    sources: [
+      { path: e2e_model_name_prefix,  destination: prefix },
+      { path: e2e_model_name_details, destination: details },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: e2e_model_name } ]
+
+  - !ArgumentFromMetadata
+    name: log_filename
+    format_rule: "{e2e_model_name}"
+    sources: [
+      { path: e2e_model_name,  destination: e2e_model_name },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: log_filename } ]
+
+  - !ArgumentFromMetadata
+    name: job_name
+    format_rule: "{details};{prefix}_"
+    sources: [
+      { path: e2e_model_name_prefix,  destination: prefix },
+      { path: e2e_model_name_details, destination: details },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: job_name } ]
+
+
+  # Extra arguments and I/O options for better flexibility down the line
+  - !ArgumentFromMetadata
+    name: out_results_yaml
+    format_rule: '"<<out-results-yaml-format={e2e_model_name}>>"'
+    prefix: "--out_central_results_fp"
+    sources: [
+      { path: e2e_model_name,         destination: e2e_model_name },
+      { path: e2e_model_name_prefix,  destination: prefix },
+      { path: e2e_model_name_details, destination: details },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: out_summary_yaml } ]
+
+  - !ArgumentFromMetadata
+    name: out_train_results_fp
+    format_rule: '"<<out-train-results-format={e2e_model_name}>>"'
+    prefix: "--out_train_results_fp"
+    sources: [
+      { path: e2e_model_name,         destination: e2e_model_name },
+      { path: e2e_model_name_prefix,  destination: prefix },
+      { path: e2e_model_name_details, destination: details },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: out_train_results_fp } ]
+
+  - !ArgumentFromMetadata
+    name: out_model_dir
+    format_rule: '"<<out-model-dir-format={e2e_model_name}>>"'
+    prefix: "--out_model_dir"
+    sources: [
+      { path: e2e_model_name,         destination: e2e_model_name },
+      { path: e2e_model_name_prefix,  destination: prefix },
+      { path: e2e_model_name_details, destination: details },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: out_model_dir } ]

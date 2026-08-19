@@ -169,20 +169,8 @@ wandb/
 # emacs junk
 *~
 
-# My extra convenience scripts
-start_jupyter_notebook.sh
-call_badger.sh
-
 # Data folders
-owen-repo
-rlc_data
 *.txt
 
 # Extra script content
-mpsr_scripts/*/
-mpsr_scripts/2024*_main_*.yaml
-mpsr_scripts/*.yaml
-pde_solver_scripts/*.yaml
-scripts/finetune_e2e/
-mmg_scripts/*.py.bak
 pipeline_scripts/*/

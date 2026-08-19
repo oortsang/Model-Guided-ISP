@@ -1,0 +1,206 @@
+---
+definitions:
+  command: python eval_MFISNet_Model_Pipeline.py
+  template: "<<rlc-repo>>/<<base-template-eval-mpsr-pipe=base_template_eval_mpsr_pipe.jinja>>"
+
+  copy_to_item: true
+
+  default_arguments:
+    log_dir: "<<rlc-repo>>/<<logs-rel-dir>>"
+    partition: <<partition="gpu">>
+    num_nodes: 1
+    num_gpu: <<num-gpu=1>>
+    num_cpu: <<num-cpu=4>>
+    exclude_node: <<exclude-node="">>
+    mem: <<mem="50G">>
+    job_walltime: "<<time-limit=8:00:00>>"
+    mail_type: <<mail-type="none">>
+    mail_user: <<mail-user>>
+
+  submission:
+    !SLURMQueue
+      jobs_folder: "<<rlc-repo>>/<<jobs-rel-dir>>"
+      job_name_key: e2e_model_name
+      fake_submission: <<badger-fake-submission=false>>
+      overwrite_scripts: <<badger-overwrite-scripts=true>>
+
+  constants:
+    base_dir: &BASE_DIR <<rlc-repo>>
+    ref_dataset_dir: &REF_DATASET_DIR "<<rlc-repo>>/<<dataset-rel-dir>>"
+    results_dir: &RESULTS_DIR "<<rlc-repo>>/<<results-rel-dir>>"
+    models_dir_base: &MODELS_DIR_BASE "<<rlc-repo>>/<<models-rel-dir>>"
+
+    # Currently, these numbers do not get altered by the number of frequencies
+    num_train_const: &NUM_TRAIN_CONST <<e2e-num-train=10000>>
+    num_val_const:   &NUM_VAL_CONST   <<e2e-num-val=1000>>
+    num_test_const:  &NUM_TEST_CONST  <<e2e-num-test=1000>>
+
+arguments:
+  ### Stuff to make the constants available ###
+  - !Scalar
+    name: e2e_date
+    value: <<e2e-date>>
+    metadata_rules: [ !SaveValueInMetadata { path: e2e_date } ]
+  - !Scalar
+    name: model_date
+    value: <<model-date>>
+    metadata_rules: [ !SaveValueInMetadata { path: model_date } ]
+  - !Scalar
+    name: num_train
+    value: *NUM_TRAIN_CONST
+    metadata_rules: [ !SaveValueInMetadata { path: num_train } ]
+  - !Scalar
+    name: num_val
+    value: *NUM_VAL_CONST
+  - !Scalar
+    name: num_test
+    value: *NUM_TEST_CONST
+
+  - !Scalar { name: base_dir, value: *BASE_DIR }
+  - !Scalar { name: ref_dataset_dir, value: *REF_DATASET_DIR }
+  - !Scalar { name: results_dir, value: *RESULTS_DIR }
+  - !Scalar { name: models_dir_base, value: *MODELS_DIR_BASE }
+  - !Scalar { name: output_pred_scobj_dir, value: "<<output-pred-scobj-dir>>" }
+
+  - !Scalar { name: whole_run_name, value: "<<whole-run-name>>" }
+  - !Scalar { name: central_model_dir, value: "<<central-model-dir>>" }
+
+  - !Scalar
+    name: data_input_nus
+    value: <<data-input-nus>>
+    metadata_rules: [ !SaveValueInMetadata { path: data_input_nus } ]
+
+  - !Scalar
+    name: e2e_dsets
+    value: "<<e2e-dsets>>"
+
+  - !Scalar
+    name: e2e_dsets_num_samples
+    value: "<<e2e-dsets-num-samples>>"
+
+
+  # Hyperparameter selection stuff
+  - !Scalar { name: in_results_pattern, value: "<<in-results-pattern>>" }
+  - !Scalar { name: hyperparam_summary_fp, value: "<<hyperparam-summary-fp>>" }
+  - !Scalar { name: output_central_summary_fp, value: "<<output-central-summary-fp>>" }
+  - !Scalar { name: output_dset_summary_fp, value: "<<output-dset-summary-fp>>" }
+  - !Scalar { name: centralize_models, value: "<<centralize-models=false>>" }
+  - !Scalar { name: central_model_fp_format, value: "<<central-model-fp-format=e2e_{0}>>" }
+
+  # Set to false to skip the hyperparameter selection stage...
+  - !Scalar { name: select_hyperparameters, value: "<<select-hyperparameters=true>>" }
+
+  # Logging
+  - !Scalar { name: out_dset_summary_fp }
+
+
+  #####################           Actual arguments           #####################
+
+  ### More-or-less fixed arguments ###
+  - !Scalar { name: seed, value: "<<e2e-eval-seed>>", prefix: "--seed" }
+  - !Scalar { name: use_targets, value: "<<eval-targets=original>>", prefix: "--use_targets" }
+  - !Scalar
+    name: d_rs_loss_weight
+    value: "<<d-rs-loss-weight=0.0>>"
+    # value: "0.0"
+    prefix: "--d_rs_loss_weight"
+    metadata_rules: [ !SaveValueInMetadata { path: d_rs_loss_weight } ]
+
+  ### Logging settings ###
+  - !Scalar { name: selection_field, value: <<selection-field="eval_rel_l2">>}
+  - !Scalar { name: selection_mode, value: <<selection-mode="min">>}
+  - !Scalar { name: results_section, value: "<<results-section=e2e_info>>"}
+
+  - !Scalar { name: wandb_entity, value: recursive-linearization, prefix: "--wandb_entity" }
+  - !Scalar { name: wandb_project, value: <<wandb-project=2025-02-12_pipeline_end_to_end_train>>, prefix: "--wandb_project" }
+  - !Scalar { name: wandb_mode, value: online, prefix: "--wandb_mode" }
+  - !Scalar { name: verbose_level, value: 1, prefix: "--verbose_level" }
+
+  ### Run settings ###
+  - !Scalar { name: samples_per_chunk, value: <<samples-per-chunk=1000>>, prefix: "--samples_per_chunk" }
+  - !Scalar
+    name: eval_batch_size
+    prefix: "--eval_batch_size"
+    value: <<e2e-eval-batch-size>>
+    metadata_rules: [ !SaveValueInMetadata { path: eval_batch_size } ]
+
+  # Noise level
+  - !Range
+    name: noise_to_signal_ratio
+    values: [ "<<noise-level=0>>" ]
+    prefix: "--noise_to_signal_ratio"
+    metadata_rules: [ !SaveValueInMetadata { path: noise_to_signal_ratio } ]
+
+  - !Scalar
+    name: use_noise_seed
+    value: "<<use-noise-seed=true>>"
+    prefix: "--use_noise_seed"
+
+  - !Scalar
+    name: noise_seed_all_arr
+    value: '<<noise-seed-all-arr=("" "" "")>>'
+
+
+  ### PDE solver settings ###
+  # Set this to 0 to indicate not to load the PDE solver objects
+  - !Scalar {name: use_pde_args, value: "<<use-pde-args=true>>", prefix: "--use_pde_args" }
+
+  - !Scalar
+    name: jax_mem_alloc_mb
+    prefix: "--jax_mem_alloc_mb"
+    value: "<<jax-mem-alloc-mb=0>>"
+    metadata_rules: [ !SaveValueInMetadata { path: jax_mem_alloc_mb } ]
+  - !Scalar
+    name: solver_type
+    prefix: "--pde_solver_type"
+    value: <<pde-solver-type=hps>>
+    metadata_rules: [ !SaveValueInMetadata { path: pde_solver_type } ]
+  - !Scalar
+    name: hps_l
+    prefix: "--pde_hps_l"
+    value: <<hps-l=3>>
+    metadata_rules: [ !SaveValueInMetadata { path: hps_l } ]
+  - !Scalar
+    name: hps_p
+    prefix: "--pde_hps_p"
+    value: <<hps-p=16>>
+    metadata_rules: [ !SaveValueInMetadata { path: hps_p } ]
+  - !Scalar
+    name: hps_sd_mat_dir
+    prefix: "--pde_hps_sd_mat_dir"
+    value: "<<hps-sd-mat-dir=rlc_data/HPS_SD_matrices>>"
+    metadata_rules: [ !SaveValueInMetadata { path: hps_sd_mat_dir } ]
+
+  - !Scalar
+    name: e2e_common_name
+    value: "<<e2e-common-name>>"
+    metadata_rules: [ !SaveValueInMetadata { path: e2e_common_name } ]
+
+  - !ArgumentFromMetadata
+    name: e2e_model_name
+    format_rule: "<<e2e-model-name>>"
+    sources: [
+      { path: e2e_date,         destination: e2e_date },
+      { path: e2e_common_name, destination: e2e_common_name },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: e2e_model_name } ]
+
+  - !ArgumentFromMetadata
+    name: job_name
+    format_rule: "{e2e_model_name}"
+    sources: [
+      { path: e2e_date,         destination: e2e_date },
+      { path: e2e_common_name, destination: e2e_common_name },
+      { path: e2e_model_name, destination: e2e_model_name },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: job_name } ]
+
+  - !ArgumentFromMetadata
+    name: log_filename
+    format_rule: "{e2e_model_name}"
+    sources: [
+      { path: e2e_date,         destination: e2e_date },
+      { path: e2e_common_name, destination: e2e_common_name },
+      { path: e2e_model_name, destination: e2e_model_name },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: log_filename } ]

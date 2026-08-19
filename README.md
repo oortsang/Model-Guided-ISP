@@ -7,13 +7,13 @@ This code repository was written jointly by Olivia Tsang and Owen Melia, adapted
 The repository is focused on a model-guided neural network, HPS-CNN, which seeks to achieve fast, high-quality reconstructions by incorporating physical knowledge of the forward model with prior knowledge of the target scattering potentials. The architecture involves an alternating sequence of learned components (an initial FYNet block, proposed by [Fan and Ying (2022)](https://doi.org/10.4310/AMSA.2022.v7.n1.a2), and 2D CNNs later on) and calls to a numerical PDE solver (HPS, see [Melia et al. (2026)](https://doi.org/10.1016/j.jcp.2025.114549) for details).
 Additionally, this repository contains a custom implementation of the recursive linearization algorithm as a classical, non-machine-learning baseline ([Chen, 1995](https://www.cs.yale.edu/publications/techreports/tr1088.pdf); [Borges et al., 2017](16M1093562)).
 
-The inverse scattering problem is a computationally challenging reconstruction task in wave-based imaging. In addition to enabling real-world applications---like medical imaging, remote sensing, and non-destructive testing---the inverse scattering problem is interesting to study as a classic example of an ill-posed, nonlinear inverse problem. The goal is to image the interior of an object based on how waves (e.g., acoustic or electromagnetic) traveling through the object get scattered. We focus on the multi-frequency setting, depicted below, where we have access to scattered wave measurements taken using incident waves of multiple frequencies.
+The inverse scattering problem is a computationally challenging reconstruction task in wave-based imaging. In addition to enabling real-world applications--like medical imaging, remote sensing, and non-destructive testing--the inverse scattering problem is interesting to study as a classic example of an ill-posed, nonlinear inverse problem. The goal is to image the interior of an object based on how waves (e.g., acoustic or electromagnetic) traveling through the object get scattered. We focus on the multi-frequency setting, depicted below, where we have access to scattered wave measurements taken using incident waves of multiple frequencies.
 
 ![Inverse scattering problem setup](.github/assets/hpscnn-assets/inverse_scattering_setup.svg)
 
 In the paper, we develop a method that recovers high-quality reconstructions orders of magnitude more quickly than classical baselines. To this end, we embed a forward model--as a differential PDE solver--into a neural network architecture. This strategy leverages both physical knowledge of the wave scattering model and prior knowledge of imaging targets learned from training data.
 
-Our proposed architecture, HPS-CNN, is illustrated below. It produces an initial estimate from low-frequency measurements, using FYNet, and progressively refines the estimate using data of increasing frequencies. In particular, each refinement step involves both a fixed, physics-based component, and a learned neural network. We use a Hierarchical Poincar\'e-Steklov (HPS) numerical PDE solver for the physics-based component and a 2D CNN for the learned component:
+Our proposed architecture, HPS-CNN, is illustrated below. It produces an initial estimate from low-frequency measurements, using FYNet, and progressively refines the estimate using data of increasing frequencies. In particular, each refinement step involves both a fixed, physics-based component, and a learned neural network. We use a [GPU-accelerated PDE solver based on the Hierarchical Poincaré-Steklov (HPS) method](https://github.com/meliao/jaxhps) for the physics-based component and a 2D CNN for the learned component:
 
 ![Architecture of the HPS-CNN Refinement block](.github/assets/hpscnn-assets/hpscnn_architecture_both.svg)
 
@@ -130,11 +130,10 @@ The measurement files are saved in hdf5 format, with all of the fields in the sc
 The dataset uses the same scattering potentials outlined by [Melia et al. (2025)](https://arxiv.org/abs/2405.13214). The PDE solver to generate the measurement files, located in `solvers/integral_equation`, sets up an integral equation derived from the Lippmann-Schwinger equation. The resulting linear system is solved to a relative tolerance of 1e-4 by a custom, GPU-ready implementation of BiCGSTAB in PyTorch.
 Note that this is a different solver from what we use in HPS-CNN, so we avoid an inverse crime.
 
-The scripts used to generate the dataset are located in `data_generation_main` and `data_generation_ood`.
+The scripts used to generate the dataset are located in `data_generation_main` (for the primary dataset) and `data_generation_ood` (for scattering potentials with out-of-distribution contrasts).
 
 ## Notes on naming
-Within the code, we adopt somewhat different naming from the paper (some of these were changed later). We refer to the "negative gradient of error in measurement space" as the "measurement misfit gradient," or abbreviated as "MMG." Similarly, the learned component of the refinement blocks is named "MMGUBlock" for "MMG Update Block." Additionally, we invoke FYNet blocks using the MFISNet-Fused interface from our previous work, as it is strictly more general.
-
+Within the code, we adopt somewhat different naming from the paper (some of these evolved over time). We refer to the "negative gradient of error in measurement space" as the "measurement misfit gradient," or abbreviated as "MMG." Similarly, the learned component of the refinement blocks is named "MMGUBlock" for "MMG Update Block." Additionally, we invoke FYNet blocks using the MFISNet-Fused interface from our previous work, as it is strictly more general.
 
 ## Citation
 If this code is helpful to your research, please cite our pre-print (and stay tuned for the forthcoming published version):

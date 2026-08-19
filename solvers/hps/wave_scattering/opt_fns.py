@@ -14,11 +14,11 @@ import time
 from typing import List, Tuple
 import logging
 
-from  solvers.hps.wave_scattering import (
+from solvers.hps.wave_scattering import (
     ScatteringProblem,
     HPSScatteringSolver,
-    SharedSolver,
 )
+from solvers.hps.wave_scattering import SharedSolver
 
 class GaussNewtonOperator():
     """Operator from Gauss-Newton steps"""

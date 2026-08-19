@@ -31,6 +31,12 @@ from .scattering_utils import (
 from .exterior_solver import forward_model_exterior
 from .interior_solver import forward_model_interior, get_utot_int
 
+# Currently disabling jit due to several cases of
+# the code randomly (but quasi-deterministically)
+# hanging; however, it could be specific to our
+# development machines or an older version of jax.
+DISABLE_JIT_FLAG = True
+
 def eval_beta_bdry_with_source(
     scat_problem: ScatteringProblem,
     q: jax.Array,
@@ -306,7 +312,7 @@ def apply_vjp(
     # Use the helper function to get the boundary values
     if verbosity >= 4:
         logging.info(f"vjp: about to call eval_beta_bdry_with_source")
-    with jax.disable_jit(True):
+    with jax.disable_jit(DISABLE_JIT_FLAG):
         outputs = eval_beta_bdry_with_source(
             scat_problem=scattering_problem,
             q=q,
@@ -325,7 +331,7 @@ def apply_vjp(
         logging.info(f"vjp: about to call down_pass_uniform_2D_ItI")
 
     incoming_imp = beta_bdry_dn + 1j*k * beta_bdry
-    with jax.disable_jit(True):
+    with jax.disable_jit(DISABLE_JIT_FLAG):
         beta_int = down_pass_uniform_2D_ItI(
             boundary_data=incoming_imp,
             S_lst=pde_problem.S_lst,
@@ -340,7 +346,7 @@ def apply_vjp(
     # 3. Compute w(x) and get the final output
     if verbosity >= 4:
         logging.info(f"vjp: about to get utot_int")
-    with jax.disable_jit(True):
+    with jax.disable_jit(DISABLE_JIT_FLAG):
         utot_int = get_utot_int(
             scattering_problem,
             q,
@@ -373,7 +379,7 @@ def apply_jvp(
     k = pde_problem.eta
     device = device if device is not None else q.device
 
-    with jax.disable_jit(True):
+    with jax.disable_jit(DISABLE_JIT_FLAG):
         utot_int = get_utot_int(
             scattering_problem,
             q=q,
@@ -383,7 +389,7 @@ def apply_jvp(
         )
     source = -k**2 * vec[..., None] * utot_int
 
-    with jax.disable_jit(True):
+    with jax.disable_jit(DISABLE_JIT_FLAG):
         u, un = eval_beta_bdry_with_source(
             scat_problem=scattering_problem,
             source=source,
@@ -391,7 +397,6 @@ def apply_jvp(
             adjoint_radiation_condition=False,
             T_ext_DtN=T_ext_DtN,
             rebuild_solver=False, # already would be rebuilt by get_utot_int
-            # rebuild_solver=rebuild_solver,
             device=device,
             verbosity=verbosity,
         )

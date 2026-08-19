@@ -1,0 +1,96 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --time={{ job_walltime }}
+#SBATCH --partition={{ partition }}
+#SBATCH --gres=gpu:{{ num_gpu }}
+#SBATCH --gpus={{ num_gpu }}
+#SBATCH --nodes={{ num_nodes }}
+#SBATCH --exclude={{ exclude_node }}
+#SBATCH --cpus-per-task={{ num_cpu }}
+#SBATCH --mem={{ mem }}
+#SBATCH --output={{ log_dir }}/{{ log_filename }}.out
+#SBATCH --error={{ log_dir }}/{{ log_filename }}.err
+#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-user={{ mail_user }}
+
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+echo "    CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+nvidia-smi -L
+lscpu | grep "Model name"
+
+DATA_BASE_DIR={{ ref_dataset_dir }}
+MODEL_DATE={{ model_date }}
+# E2E_DATE={{ e2e_date }}
+RESULT_NAME="{{ e2e_model_name }}"
+echo target result name: $RESULT_NAME
+
+
+
+selected_base_model_name="{{ model_date }}_selected_models_{{ base_model_name }}"
+# selected_e2e_model_name="{{ e2e_date }}_selected_models_post_e2e_{{ base_model_name }}_\
+# {{ e2e_model_name_details }}"
+out_e2e_model_name="{{e2e_model_name}}"
+
+OUT_MODEL_DIR="{{ models_dir_base }}/${RESULT_NAME}"
+# IN_CENTRAL_RESULTS_FP="{{ results_dir }}/${selected_base_model_name}.yaml"
+
+OUT_TRAIN_RESULTS_FP="{{ results_dir }}/${RESULT_NAME}.txt"
+OUT_CENTRAL_RESULTS_FP="{{ results_dir }}/${out_e2e_model_name}.yaml"
+
+# echo "in_central_results_fp ${IN_CENTRAL_RESULTS_FP}"
+echo "out_central_results_fp ${OUT_CENTRAL_RESULTS_FP}"
+
+NU_ARG=$(echo "{{ data_input_nus }}" | sed "s/(\|)\|\| //g" | sed "s/,/ /g")
+N_freqs=$(echo ${NU_ARG} | wc -w) # extract number of frequencies
+
+# OUT_RESULTS_YAML="{{ out_results_yaml }}"
+# --out_central_results_fp "${OUT_CENTRAL_RESULTS_FP}" \
+# --out_train_results_fp "${OUT_TRAIN_RESULTS_FP}" \
+# --out_model_dir "${OUT_MODEL_DIR}" \
+
+# noise_seed_train_list=({{ noise_seed_train_list }})
+# noise_seed_val_list=({{ noise_seed_val_list }})
+#     --noise_seed_train ${noise_seed_train_list} \
+#     --noise_seed_val ${noise_seed_val_list} \
+
+{{ command }} \
+    --data_input_nus $NU_ARG \
+    --data_dir_base "$DATA_BASE_DIR" \
+    --truncate_num {{ num_train }} \
+    --truncate_num_val {{ num_val }} \
+    {{ log_train_subset_frac }} \
+    {{ noise_to_signal_ratio}} \
+    {{ use_noise_seed }} \
+    {{ noise_seed_list_train }} \
+    {{ noise_seed_list_val }} \
+    {{ use_targets }} \
+    {{ in_central_results_fp }} \
+    {{ out_train_results_fp }} \
+    {{ out_model_dir }} \
+    {{ out_results_yaml }} \
+    {{ d_rs_loss_weight }} \
+    {{ lr_init }} \
+    {{ eta_min }} \
+    {{ weight_decay }} \
+    {{ batch_size }} \
+    {{ num_epochs }} \
+    {{ seed }} \
+    {{ solver_type }} \
+    {{ hps_l }} \
+    {{ hps_p }} \
+    {{ hps_comp_domain_factor }} \
+    {{ hps_sd_mat_dir }} \
+    {{ jax_mem_alloc_mb }} \
+    {{ n_batches_per_log }} \
+    {{ n_epochs_per_log }} \
+    {{ save_all_model_weights }} \
+    {{ selection_field }} \
+    {{ selection_mode }} \
+    {{ wandb_entity }} \
+    {{ wandb_project }} \
+    {{ wandb_mode }} \
+    {{ verbose_level }}

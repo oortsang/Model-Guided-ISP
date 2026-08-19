@@ -1,0 +1,84 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --time={{ job_walltime }}
+#SBATCH --partition={{ partition }}
+#SBATCH --gres=gpu:{{ num_gpu }}
+#SBATCH --gpus={{ num_gpu }}
+#SBATCH --nodes={{ num_nodes }}
+#SBATCH --exclude={{ exclude_node }}
+#SBATCH --cpus-per-task={{ num_cpu }}
+#SBATCH --mem={{ mem }}
+#SBATCH --output={{ log_dir }}/{{ log_filename }}.out
+#SBATCH --error={{  log_dir }}/{{ log_filename }}.err
+#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-user={{ mail_user }}
+
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+echo "    CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+nvidia-smi -L
+
+# RESULT_NAME=$(echo "{{ model_name }}" | sed "s/(\|)\|\| //g" | sed "s/,/_/g")
+RESULT_NAME="{{ model_name }}"
+BASE_DIR="{{ base_dir }}"
+
+echo target result name: $RESULT_NAME
+
+DATA_BASE_DIR={{ dataset_dir }}
+RESULTS_FP={{ results_dir }}/$RESULT_NAME.txt
+MODELS_DIR={{ models_dir_base }}/$RESULT_NAME
+
+echo "DATA_BASE_DIR: $DATA_BASE_DIR"
+echo "RESULTS_FP: $RESULTS_FP"
+echo "MODELS_DIR: $MODELS_DIR"
+
+# touch $RESULTS_FP # in case it doesn't exist yet
+rm -f $RESULTS_FP
+rm -rf $MODELS_DIR # be careful I guess
+mkdir -p $MODELS_DIR
+
+NU_ARG=$(echo "{{ data_input_nus }}" | sed "s/(\|)\|\| //g" | sed "s/,/ /g")
+N_freqs=$(echo ${NU_ARG} | wc -w) # extract number of frequencies
+
+echo nu_arg=$NU_ARG
+
+{{ command }} \
+    --data_dir_base $DATA_BASE_DIR \
+    --data_input_nus $NU_ARG \
+    --model_weights_dir $MODELS_DIR \
+    --train_results_fp $RESULTS_FP \
+    --truncate_num {{ ntrain }} \
+    --truncate_num_val {{ nval }} \
+    {{ use_which_targets }} \
+    {{ seed }} \
+    {{ use_noise_seed }} \
+    {{ noise_seed_train }} \
+    {{ noise_seed_val }} \
+    {{ n_cnn_1d }} \
+    {{ n_cnn_2d }} \
+    {{ n_cnn_channels_1d }} \
+    {{ n_cnn_channels_2d }} \
+    {{ kernel_size_1d }} \
+    {{ kernel_size_2d }} \
+    {{ noise_to_signal_ratio }} \
+    {{ n_epochs }} \
+    {{ n_epochs_per_log }} \
+    {{ lr_init }} \
+    {{ eta_min }} \
+    {{ weight_decay }} \
+    {{ batch_size }} \
+    {{ init_scale }} \
+    {{ init_mode }} \
+    {{ debug }} \
+    {{ save_all_model_weights }} \
+    {{ selection_field }} \
+    {{ selection_mode }} \
+    {{ output_pred_save }} \
+    {{ output_pred_dir }} \
+    {{ output_pred_shard_size }} \
+    {{ wandb_entity }} \
+    {{ wandb_project}} \
+    {{ wandb_mode }}

@@ -1,0 +1,104 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --time={{ job_walltime }}
+#SBATCH --partition={{ partition }}
+#SBATCH --gres=gpu:{{ num_gpu }}
+#SBATCH --gpus={{ num_gpu }}
+#SBATCH --nodes={{ num_nodes }}
+#SBATCH --exclude={{ exclude_node }}
+#SBATCH --cpus-per-task={{ num_cpu }}
+#SBATCH --mem={{ mem }}
+#SBATCH --output={{ log_dir }}/{{ log_filename }}.out
+#SBATCH --error={{  log_dir }}/{{ log_filename }}.err
+#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-user={{ mail_user }}
+
+
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+echo "    CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+nvidia-smi -L
+
+# RESULT_NAME=$(echo "{{ model_name }}" | sed "s/(\|)\|\| //g" | sed "s/,/_/g")
+
+RESULT_NAME="{{ model_name }}"
+
+TRAIN_RESULTS_FP="{{ results_dir }}/${RESULT_NAME}.txt"
+MODELS_DIR="{{ models_dir_base }}/${RESULT_NAME}"
+
+# Prepare the directories and delete old files
+rm -f $TRAIN_RESULTS_FP
+
+NUM_TRAIN={{ num_train }}
+NUM_VAL={{ num_val }}
+NUM_TEST={{ num_test }}
+
+data_input_nus={{ data_input_nus }} # leave as a variable in case we need to change the formatting
+data_input_nus_spaced=$(echo $data_input_nus | sed "s/[()]//g" | sed "s/,/ /g")
+
+# In case the predictions inputs only have scattering objects, set up symlinks to handle them...
+dset_list="train val test"
+for nu in ${data_input_nus_spaced}; do
+    for dset_name in ${dset_list}; do
+        # pred_dset_dir="{{ predictions_dir_base }}/{{ predictions_input_name }}/${dset_name}_measurements_nu_${nu}"
+        # pred_dset_dir="{{ predictions_dir }}/{{ predictions_input_name }}/${dset_name}_measurements_nu_${nu}"
+        pred_dset_dir="{{ predictions_input_name }}/${dset_name}_measurements_nu_${nu}"
+        if [ ! -d ${pred_dset_dir}  ] && [ ! -L ${pred_dset_dir} ]; then
+            >&2 echo "creating a link from ${dset_name}_measurements_nu_${nu} to ${dset_name}_scattering_objs in {{predictions_input_name}}"
+            ln -s "${dset_name}_scattering_objs" ${pred_dset_dir}
+        else
+            >&2 echo "Already exists (no need to make a symlink): ${pred_dset_dir}"
+        fi
+    done
+done
+
+
+
+{{ command }} \
+    --ref_data_dir_base "{{ ref_dataset_dir }}" \
+    --pred_data_dir_base "{{ predictions_input_name }}" \
+    --data_input_nus $data_input_nus \
+    --model_weights_dir ${MODELS_DIR} \
+    --train_results_fp ${TRAIN_RESULTS_FP} \
+    --truncate_num $NUM_TRAIN \
+    --truncate_num_val $NUM_VAL \
+    {{ use_which_targets }} \
+    {{ seed }} \
+    {{ n_cnn_1d }} \
+    {{ n_cnn_2d }} \
+    {{ n_cnn_channels_1d }} \
+    {{ n_cnn_channels_2d }} \
+    {{ kernel_size_1d }} \
+    {{ kernel_size_2d }} \
+    {{ use_cnns_2d }} \
+    {{ mmfc }} \
+    {{ polar_padding }} \
+    {{ noise_to_signal_ratio }} \
+    {{ use_noise_seed }} \
+    {{ noise_seed_train }} \
+    {{ noise_seed_val }} \
+    {{ n_epochs }} \
+    {{ n_epochs_per_log }} \
+    {{ lr_init }} \
+    {{ eta_min }} \
+    {{ lr_decrease_factor }} \
+    {{ freq_lvl }} \
+    {{ weight_decay }} \
+    {{ init_mode }} \
+    {{ embedding_mode }} \
+    {{ n_emb_channels_out }} \
+    {{ set_c1d_per_freq }} \
+    {{ use_pred_d_mh }} \
+    {{ batch_size }} \
+    {{ big_init }} \
+    {{ debug }} \
+    {{ wandb_mode }} \
+    {{ wandb_entity }} \
+    {{ wandb_project }}
+
+# --pred_data_dir_base "{{ predictions_dir_base }}/{{ predictions_input_name }}"
+
+>&2 echo "Training script is exiting..."

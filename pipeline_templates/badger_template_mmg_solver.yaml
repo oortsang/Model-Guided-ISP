@@ -1,0 +1,164 @@
+# Config file for converting scattering object files to measurement misfit gradients
+---
+definitions:
+  command: python generate_meas_misfit_gradient_files.py
+  template: "<<rlc-repo>>/<<base-template-mmg-solver=pipeline_templates/base_template_mmg_solver.jinja>>"
+  copy_to_item: true
+  default_arguments:
+    log_dir: <<logs-rel-dir=logs/mmg_pipeline/mmg_solver>>
+    partition: <<partition="gpu">>
+    num_nodes: 1
+    num_gpu: <<num-gpu=1>>
+    num_cpu: <<num-cpu=4>>
+    exclude_node: <<exclude-node="">>
+    mem: <<mem="25G">>
+    job_walltime: "<<time-limit=4:00:00>>"
+    mail_type: <<mail-type=end>>
+    mail_user: <<mail-user="">>
+  submission:
+    !SLURMQueue
+      jobs_folder: <<jobs-rel-dir=jobs/mmg_pipeline/mmg_solver>>
+      job_name_key: log_name
+      fake_submission: <<badger-fake-submission=false>>
+      overwrite_scripts: <<badger-overwrite-scripts=false>>
+  constants:
+    # input_scobj_dir: &INPUT_SCOBJ_DIR "<<rlc-repo>>/<<predictions-rel-dir>>/\
+    #   <<input-scobj-dir>>/<<dset>>_scattering_objs"
+    input_scobj_dir: &INPUT_SCOBJ_DIR "<<rlc-repo>>/<<input-scobj-dir>>/<<dset>>_scattering_objs"
+    sd_mat_dir: &SD_MAT_DIR "<<rlc-repo>>/\
+      <<hps-sd-mat-dir=ERROR>>"
+    ref_dataset_dir: &REF_DATASET_DIR "<<rlc-repo>>/<<ref-dataset-rel-dir=dataset>>"
+    output_dir: &OUTPUT_DIR "<<rlc-repo>>/<<output-mmg-rel-dir>>"
+
+arguments:
+  - !Scalar
+    name: ref_dataset_dir
+    value: *REF_DATASET_DIR
+    metadata_rules: [!SaveValueInMetadata {path: ref_dataset_dir} ]
+  - !Scalar
+    name: output_dir
+    value: *OUTPUT_DIR
+    metadata_rules: [!SaveValueInMetadata {path: output_dir} ]
+  - !Scalar
+    name: input_scobj_dir,
+    value: *INPUT_SCOBJ_DIR
+    metadata_rules: [ !SaveValueInMetadata {path: input_scobj_dir}]
+
+  - !Scalar { name: hps_sd_mat_dir, value: *SD_MAT_DIR, prefix: "--hps_sd_mat_dir" }
+  - !Scalar { name: hps_l, value: <<hps-l=4>>, prefix: "--hps_l" }
+  - !Scalar { name: hps_p, value: <<hps-p=16>>, prefix: "--hps_p" }
+  - !Scalar
+    name: hps_comp_domain_factor
+    prefix: "--hps_comp_domain_factor"
+    value: <<hps-comp-domain-factor=1.1>>
+
+  - !Scalar { name: receiver_radius, value: 100, prefix: "--receiver_radius" }
+  - !Scalar { name: start_idx, value: "0", prefix: "--start_idx" }
+  - !Scalar { name: create_n_samples, value: -1, prefix: "--create_n_samples" }
+  - !Scalar { name: write_every_n, value: <<write-every-n=10>>, prefix: "--write_every_n" }
+  - !Scalar { name: debug, value: "--debug", prefix: "" }
+  - !Scalar { name: wandb_entity,  value: "<<wandb-entity=recursive-linearization>>", prefix: "--wandb_entity" }
+  - !Scalar { name: wandb_project, value: "<<wandb-project>>", prefix: "--wandb_project" }
+  - !Scalar { name: wandb_mode, value: "<<wandb-mode=online>>", prefix: "--wandb_mode" }
+
+  - !Scalar
+    name: dset
+    value: "<<dset>>"
+    metadata_rules: [ !SaveValueInMetadata { path: dset } ]
+
+  - !Range
+    name: nu_source_freq
+    values: [ "<<nu-sf>>" ] # keep as strings to have good control over decimal points later
+    prefix: "--kbar_source_freq"
+    metadata_rules: [ !SaveValueInMetadata { path: nu_sf }]
+
+  - !Range
+    name: chunk_start_idx
+    start: <<first-chunk-start=0>>
+    end:  <<num-samples>>
+    step: <<samples-per-chunk=250>>
+    metadata_rules: [ !SaveValueInMetadata {path: input_label}]
+
+  # Noise seed handling
+  - !Scalar
+    name: noise_to_signal_ratio
+    # value: "<<noise-to-signal-ratio=0.0>>"
+    value: "<<noise-level=0.0>>"
+    prefix: "--noise_to_signal_ratio"
+    metadata_rules: [ !SaveValueInMetadata {path: noise_to_signal_ratio}]
+
+  - !Scalar
+    name: use_noise_seed
+    value: "<<use-noise-seed>>"
+    prefix: "--use_noise_seed"
+    metadata_rules: [ !SaveValueInMetadata {path: use_noise_seed}]
+
+  - !Scalar
+    name: noise_seed_base
+    value: "<<noise-seed-base>>"
+    metadata_rules: [ !SaveValueInMetadata {path: noise_seed_base}]
+
+  - !ArgumentFromMetadata
+    name: noise_seed
+    prefix: "--noise_seed"
+    format_rule: "$((<<noise-seed-format-rule={input_label}+{noise_seed_base}>>))"
+    sources: [
+      {path: noise_seed_base, destination: noise_seed_base},
+      {path: input_label, destination: input_label},
+    ]
+
+
+  - !ArgumentFromMetadata
+    name: input_scobj_fp
+    prefix: "--input_scobj_fp"
+    format_rule: "'{scobj_dir}/scattering_objs_{input_label}.h5'"
+    sources: [
+      {path: input_scobj_dir, destination: scobj_dir},
+      {path: input_label, destination: input_label},
+    ]
+
+  - !ArgumentFromMetadata
+    name: input_meas_dir
+    prefix: "--input_meas_dir"
+    format_rule: "'{ref_dataset_dir}/{dset}_measurements_nu_{nu_sf}'"
+    # format_rule: "<<rlc-repo>>/<<ref-dataset-dir>>/<<dset>>_measurements_nu_{nu_sf}"
+    sources: [
+      {path: ref_dataset_dir, destination: ref_dataset_dir},
+      {path: dset, destination: dset},
+      {path: nu_sf, destination: nu_sf},
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: input_meas_dir } ]
+
+  - !ArgumentFromMetadata
+    name: job_name
+    format_rule: "<<job-name-format>>"
+    sources: [
+      {path: input_label, destination: input_label},
+      {path: nu_sf, destination: nu_sf},
+      {path: dset, destination: dset},
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: job_name } ]
+
+  - !ArgumentFromMetadata
+    name: log_name
+    format_rule: "<<log-name-format>>"
+    sources: [
+      {path: input_label, destination: input_label},
+      {path: nu_sf, destination: nu_sf},
+      {path: dset, destination: dset},
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: log_name } ]
+
+  - !ArgumentFromMetadata
+    name: output_fp
+    # prepend: *OUTPUT_DIR
+    prefix: "--output_fp"
+    # format_rule: "<<dset>>_gammas_nu_{nu_sf}/gammas_{input_label}.h5"
+    format_rule: "'<<output-name-format>>'"
+    sources: [
+      {path: output_dir, destination: output_dir},
+      {path: dset, destination: dset},
+      {path: log_name, destination: log_name},
+      {path: input_label, destination: input_label},
+      {path: nu_sf, destination: nu_sf}
+    ]

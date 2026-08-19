@@ -421,17 +421,6 @@ class SequentialTasks(TaskGroup):
             print(f"SequentialTasks {self.name} tail jobs: {' '.join(new_job_id_list)}")
         return all_job_id_list, new_job_id_list
 
-    # def get_tasks_from_command(self, command_str):
-    #     code_list, code_str = self.get_codes()
-
-    #     if code_str == COMMAND_STR_ALL:
-    #         return self # just use everything
-
-    #     selected_task_list = []
-    #     command_list = command_str.split(" ")
-    #     print(f"{self.name} command list {command_list}")
-
-
 class ParallelTasks(TaskGroup):
     """Package a group of tasks together that should be allowed to run in parallel
     In the future, this will affect slurm behavior

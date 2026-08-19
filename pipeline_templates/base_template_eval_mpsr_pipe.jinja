@@ -1,0 +1,96 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --time={{ job_walltime }}
+#SBATCH --partition={{ partition }}
+#SBATCH --gres=gpu:{{ num_gpu }}
+#SBATCH --gpus={{ num_gpu }}
+#SBATCH --nodes=1
+#SBATCH --exclude={{ exclude_node }}
+#SBATCH --cpus-per-task={{ num_cpu }}
+#SBATCH --mem={{ mem }}
+#SBATCH --output={{ log_dir }}/{{ log_filename }}.out
+#SBATCH --error={{ log_dir }}/{{ log_filename }}.err
+#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-user={{ mail_user }}
+
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+nvidia-smi -L
+lscpu | grep "Model name"
+
+RLC_REPO="{{ base_dir }}"
+DATA_DIR_BASE="{{ ref_dataset_dir }}"
+DATA_INPUT_NUS="{{ data_input_nus }}"
+RESULTS_DIR="{{ results_dir }}"
+echo "RESULTS_DIR: ${RESULTS_DIR}"
+NU_ARG=$(echo ${DATA_INPUT_NUS} | sed "s/(\|)\|\| //g" | sed "s/,/ /g")
+
+
+hyperparam_summary_fp="{{ hyperparam_summary_fp }}"
+
+if [[ {{ select_hyperparameters }} == "true" ]]; then
+    # in_results_pattern="{{ in_results_pattern }}"
+    # results_section="{{ results_section }}"
+    # selection_field_name="{{ selection_field }}"
+    # selection_mode="{{ selection_mode }}"
+    python select_hyperparameter_from_yamls.py \
+        --results-dir-base "{{ results_dir }}" \
+        --results-file-pattern="{{ in_results_pattern }}" \
+        --results-section="{{ results_section }}" \
+        --output-summary-fp="{{ hyperparam_summary_fp }}" \
+        --field-name="{{ selection_field }}" \
+        --selection-mode="{{ selection_mode }}" \
+        --centralize-models="{{ centralize_models }}" \
+        --central-model-dir="{{ central_model_dir }}" \
+        --central-model-fp-format="{{ central_model_fp_format }}" \
+        --verbosity=1
+    
+    
+    if [[ {{centralize_models}} == "true" ]]; then
+        echo "Copied models over to a centralized location"
+        # Maybe should copy over the hyperparam_summary_fp to out_central_summary_fp ??
+        # copy -u ?
+    fi
+fi
+
+e2e_dsets=({{ e2e_dsets }})
+e2e_dsets_num_samples=({{ e2e_dsets_num_samples }})
+e2e_noise_seed_arr={{ noise_seed_all_arr }}
+
+num_dsets=$(echo "{{ e2e_dsets }}" | wc -w) # number of dsets passed in
+for di in $(seq 0 $((num_dsets-1)) ); do
+    echo "Dataset #${di}: ${e2e_dsets[$di]} with ${e2e_dsets_num_samples[$di]} samples"
+    dset=${e2e_dsets[$di]}
+    num_samples=${e2e_dsets_num_samples[$di]}
+
+    in_central_results_fp="${hyperparam_summary_fp}"
+    output_dset_summary_fp="{{ output_dset_summary_fp }}"
+    output_predictions_dir="{{ output_pred_scobj_dir }}/${dset}_scattering_objs"
+    mkdir -p ${output_predictions_dir}
+
+    python eval_MFISNet_Model_Pipeline.py \
+    --data_dir_base "${DATA_DIR_BASE}" \
+    --data_input_nus $NU_ARG \
+    {{ use_targets }} \
+    --truncate_num $num_samples \
+    --eval_on_set $dset \
+    --in_central_results_fp "${in_central_results_fp}" \
+    --output_summary_fp "${output_dset_summary_fp}" \
+    --output_predictions_dir "${output_predictions_dir}" \
+    {{ use_pde_args }} \
+    {{ solver_type }} \
+    {{ hps_l}} \
+    {{ hps_p }} \
+    {{ hps_sd_mat_dir }} \
+    {{ noise_to_signal_ratio }} \
+    {{ use_noise_seed }} \
+    --noise_seed_list ${e2e_noise_seed_arr[$di]} \
+    {{ samples_per_chunk }} \
+    {{ eval_batch_size }} \
+    {{ seed }}\
+    --debug
+
+done

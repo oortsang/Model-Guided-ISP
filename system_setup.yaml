@@ -1,0 +1,31 @@
+# system_setup.yaml: a convenience file to coordinate commonly-used
+# settings that are likely system/cluster/filesystem-specific. Supports
+# pipeline-based experiments that use src/utils/pipeline_blocks.py, as
+# these generate badger configs on the fly (via get_standard_mmg_settings).
+# However, certain files called directly with badger (i.e., python -m badger ...)
+# will need to be edited manually, such as:
+#   experiments/reclin/2025-10-31_config_rl_mod_{noise,ood}.yaml
+#   data_generation_main/badger_generate_measurements_{train,val,test}.yaml
+#   data_generation_main/badger_generate_scattering_files_{train,val,test}.yaml
+#   data_generation_ood/2025-09-23_badger_generate_test_measurement_files_contrast_*.yaml
+#   data_generation_ood/2025-09-23_badger_generate_test_scattering_files_contrast_*.yaml
+
+
+file-paths:
+  repo-dir: "/home-nfs/oortsang/model-guided-isp"
+  data-rel-dir: "rlc_data"
+  main-dataset: "dataset"
+  ood-dataset: "ood_dataset"
+  hps-sd-mat-dir: "HPS_SD_matrices"
+
+default-slurm-settings:
+  partition: "gpu,willett-gpu,low-gpu"
+  mem: "50G"
+  num-nodes: 1
+  num-cpu: 2
+  num-gpu: 1
+  time-limit: "8:00:00"
+
+wandb-settings:
+  wandb-entity: "none"
+  wandb-mode: "offline"

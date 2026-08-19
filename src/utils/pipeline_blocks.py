@@ -4,6 +4,7 @@
 
 
 import os, sys, copy, re
+import yaml
 
 from .pipeline_utils import (
     # Helper functions
@@ -782,35 +783,79 @@ class MMGTaskPipeline(TaskPipeline):
             print(f"All pipeline jobs encountered: {' '.join(map(str, all_job_id_list))}")
         return all_job_id_list, all_job_id_list
 
+SYSTEM_SETUP_FP = os.path.join(os.path.dirname(__file__), "..", "..", "system_setup.yaml")
+
+def load_system_setup(config_fp: str = SYSTEM_SETUP_FP) -> dict:
+    """Load repo-wide defaults (rlc-repo location, slurm/wandb defaults, ...)
+    from system_setup.yaml so individual pipeline configs don't need to
+    hardcode them. Returns {} if the file isn't present, so callers can fall
+    back to their own defaults.
+    """
+    config_fp = os.path.abspath(config_fp)
+    if not os.path.isfile(config_fp):
+        return {}
+    with open(config_fp, "r") as f:
+        return yaml.safe_load(f) or {}
+
 ### Can write an alternate version for mpsr settings or other stuff that come up later ###
-def get_standard_mmg_settings(rlc_repo_dir: str, rlc_data_dir: str = None):
+def get_standard_mmg_settings(repo_dir: str = None, rlc_data_dir: str = None):
     """Get the basic/standard settings for the mmg pipeline
     """
+    system_setup = load_system_setup()
+    file_paths = system_setup.get("file-paths", {})
+
+    if repo_dir is None:
+        if "repo-dir" in file_paths:
+            repo_dir = file_paths["repo-dir"].rstrip("/")
+        else:
+            raise ValueError(
+                "No valid repo directory passed to get_standard_mmg_settings! "
+                "Please either pass by argument or place under system_setup.yaml "
+                "under a file-paths section."
+            )
+
+    if rlc_data_dir is None:
+        rlc_data_dir = file_paths.get("data-rel-dir", "rlc_data")
     rlc_data_dir = rlc_data_dir.rstrip("/") if rlc_data_dir is not None else "rlc_data"
+
+    # Overrideable settings fetched from system_setup.yaml, if present
+    # (mail-user/mail-type and badger-* settings are intentionally left out;
+    # they're rarely changed and can be added back in if someone wants them)
+    system_settings = {
+        **system_setup.get("default-slurm-settings", {}),
+        **system_setup.get("wandb-settings", {}),
+    }
+
+    dataset_dir = file_paths.get("main-dataset", "dataset")
+
     standard_settings = {
         # General stuff
-        "rlc-repo":                 rlc_repo_dir,
+        "rlc-repo":                 repo_dir,
         "rlc-data":                 rlc_data_dir,
-        "ref-dataset-rel-dir":      "dataset",
-        "templates-rel-dir":        "mmg_scripts",
+        "dataset-rel-dir":          dataset_dir, # for FYNet/base
+        "ref-dataset-rel-dir":      dataset_dir, # for MMG/refinement-based stuff
+        "ref-dataset-dir":          dataset_dir, # for MMG/refinement-based stuff
+        "dataset-dir":              dataset_dir, # just in case
+        "templates-rel-dir":        "pipeline_templates",
         "predictions-rel-dir":      f"{rlc_data_dir}/mmg_pipeline/predictions",
         "results-rel-dir":          f"{rlc_data_dir}/mmg_pipeline/results",
         "models-rel-dir":           f"{rlc_data_dir}/mmg_pipeline/models",
         "central-rel-dir":          f"{rlc_data_dir}/mmg_pipeline/central_run_info",
+        "hps-sd-mat-dir":           file_paths.get("hps-sd-mat-dir", f"{rlc_data_dir}/HPS_SD_matrices"),
         # Slurm stuff
         "logs-rel-dir-base":        "logs/mmg_pipeline",
         "jobs-rel-dir-base":        "jobs/mmg_pipeline",
-        "partition":                "gpu",
+        "partition":                system_settings.get("partition", "gpu"),
         "badger-fake-submission":   "true",
         "badger-overwrite-scripts": "true",
         "mail-type":                "NONE",
         "mail-user":                "NONE",
-        "num-gpu":                  "1",
-        "num-cpu":                  "2",
-        "mem":                      "50G",
-        "time-limit":               "4:00:00",
-        "wandb-entity":             "recursive-linearization",
-        "wandb-mode":               "offline",
+        "num-gpu":                  system_settings.get("num-gpu", "1"),
+        "num-cpu":                  system_settings.get("num-cpu", "2"),
+        "mem":                      system_settings.get("mem", "50G"),
+        "time-limit":               system_settings.get("time-limit", "4:00:00"),
+        "wandb-entity":             system_settings.get("wandb-entity", "none"),
+        "wandb-mode":               system_settings.get("wandb-mode", "offline"),
 
         # Template locations
         "base-template-train-fynet":   "<<templates-rel-dir>>/base_template_train_fynet.jinja",

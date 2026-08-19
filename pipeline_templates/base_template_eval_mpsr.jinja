@@ -1,0 +1,206 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --time={{ job_walltime }}
+#SBATCH --partition={{ partition }}
+#SBATCH --gres=gpu:{{ num_gpu }}
+#SBATCH --gpus={{ num_gpu }}
+#SBATCH --nodes={{ num_nodes }}
+#SBATCH --exclude={{ exclude_node }}
+#SBATCH --cpus-per-task={{ num_cpu }}
+#SBATCH --mem={{ mem }}
+#SBATCH --output={{ log_dir }}/{{ log_filename }}.out
+#SBATCH --error={{  log_dir }}/{{ log_filename }}.err
+#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-user={{ mail_user }}
+
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+nvidia-smi -L
+
+output_common_name="{{ output_common_name }}"
+
+model_date={{ model_date }}
+data_input_nus={{ data_input_nus }}
+selection_field_name={{ selection_field_name }}
+selection_mode={{ selection_mode }}
+epoch_choice="best" # latest or best
+
+ref_data_dir_base="{{ ref_dataset_dir }}"
+models_dir_base="{{ models_dir_base }}"
+results_dir="{{ results_dir }}"
+
+# Updated for the new mmg-pipeline style outputs
+pred_input_data_dir="{{ predictions_input_name }}"
+pred_output_data_dir="{{ predictions_output_name }}"
+
+train_output_summary_fp="${results_dir}/${output_common_name}_train.yaml"
+train_output_predictions_dir="${pred_output_data_dir}/train_scattering_objs"
+val_output_summary_fp="${results_dir}/${output_common_name}_val.yaml"
+val_output_predictions_dir="${pred_output_data_dir}/val_scattering_objs"
+test_output_summary_fp="${results_dir}/${output_common_name}_test.yaml"
+test_output_predictions_dir="${pred_output_data_dir}/test_scattering_objs"
+
+# N_freqs=$(echo ${NU_ARG} | wc -w) # extract number of frequencies
+NU_ARG=$(echo "${data_input_nus}" | sed "s/(\|)\|\| //g" | sed "s/,/ /g")
+NU_NAME=$(echo ${NU_ARG} | sed "s/ /_/g")
+
+### 1. Select the appropriate hyperparameters
+results_file_pattern="{{ results_file_pattern }}"
+hyperparam_summary_fp="${results_dir}/${output_common_name}_nus_${NU_NAME}_hyperparam_summary.yaml"
+
+# results_file_pattern="${model_date}_${base_model_name}_nus_${NU_NAME}_noise_*_arch_*_opt_*.txt"
+# results_file_pattern="${model_date}_{{ base_model_name }}_arch_*.txt"
+# hyperparam_summary_fp="${results_dir}/${output_common_name}_hyperparam_summary.yaml"
+
+echo "(unused) Hyperparam selection received nu=${NU_ARG}"
+echo "(unused) Search through files with pattern ${results_file_pattern}"
+echo "(unused) Output summary as ${hyperparam_summary_fp}"
+
+python select_hyperparameter_from_runs.py \
+    --results-dir-base=${results_dir} \
+    --results-file-pattern=${results_file_pattern} \
+    --models-dir-base=${models_dir_base} \
+    --output-summary-fp="${hyperparam_summary_fp}" \
+    --field-name=${selection_field_name} \
+    --selection-mode=${selection_mode} \
+    --verbosity-level=1
+
+# ### 2. Evaluate the best hyperparameters
+# # ... but only if requested
+evaluate_best_hyperparams="true"
+if [[ $evaluate_best_hyperparams == "true" ]]; then
+    hyperparam_file_name="${hyperparam_summary_fp}"
+    >&2 echo "hyperparam_file_name=${hyperparam_file_name}"
+
+    training_results_fp=$(cat "${hyperparam_file_name}" | grep "selected_result_file" | sed "s/.*: //")
+    model_file_name=$(cat "${hyperparam_file_name}" | grep "selected_model_file" | sed "s/.*: //")
+    >&2 echo "Using training results file ${training_results_fp}"
+    >&2 echo "model_file_name = ${model_file_name}"
+
+    # Trim off the model file name from the end...
+    # model_dir=$(echo ${model_file_name} | sed "s/\/[^/]*$//")
+    model_dir=$(dirname "${model_file_name}")
+    >&2 echo "Using model directory ${model_dir}"
+
+    >&2 echo "Searching through model directory ${model_dir}"
+    mkdir -p "${pred_output_data_dir}"
+    >&2 echo "Creating directory ${pred_output_data_dir}"
+
+    ## Consolidate the models and results
+    # Copies over the settings into the central-results-fp
+    central_results_fp="{{central_results_fp}}"
+    central_model_dir="{{central_model_dir}}"
+    freq_idx={{freq_idx}}
+    central_model_fp="{{ central_model_dir }}/{{ central_model_format }}"
+    selected_epoch=$( \
+        {{ fetch_result_command }} \
+        --training-results-fp ${training_results_fp} \
+        --training-results-key ${selection_field_name} \
+        --freq-idx {{ freq_idx }} \
+        --central-results-fp ${central_results_fp} \
+        --new-entries "freq_idx={{ freq_idx }}; block_type={{ level_type }}; central_model_fp=${central_model_fp}"
+    )
+    >&2 echo "Epoch ${epoch_choice} is the best epoch"
+    # Now, copy over the model file
+    if [ ! -d ${central_model_dir} ]; then
+       mkdir ${central_model_dir}
+    fi
+    >&2 echo "Copying model from ${model_file_name} to {{central_model_dir}}/{{central_model_format}}"
+    # cp "${model_file_name}" "{{ central_model_dir }}/{{ central_model_format }}"
+    cp "${model_file_name}" "${central_model_fp}"
+
+
+    ## Do the actual evaluation
+
+    >&2 echo "*** Starting training set evaluation ***"
+    # Train
+    >&2 echo "test_output_predictions_dir: ${train_output_predictions_dir}"
+    >&2 echo "Evaluate on the training set..."
+    python eval_MFISNet_pde_solver_refinement_v1.py \
+        --ref_data_dir_base "${ref_data_dir_base}" \
+        --pred_data_dir_base "${pred_input_data_dir}" \
+        --data_input_nus $data_input_nus \
+        {{ use_which_targets }} \
+        {{ truncate_num_train }} \
+        --eval_on_set train \
+        --manual_model_fp "${central_model_fp}" \
+        --model_dir "${model_dir}" \
+        --training_results_fp "${training_results_fp}" \
+        --training_results_key $selection_field_name \
+        --use_epoch ${epoch_choice} \
+        --test_output_summary_fp "${train_output_summary_fp}" \
+        --test_output_predictions_dir "${train_output_predictions_dir}" \
+        {{ noise_to_signal_ratio }} \
+        {{ use_noise_seed }} \
+        {{ noise_seed_train }} \
+        {{ samples_per_chunk }} \
+        {{ eval_batch_size }} \
+        {{ use_pred_d_mh }} \
+        {{ seed }} \
+        {{ debug }}
+
+    # Validation
+    >&2 echo "Evaluate on the validation set..."
+    python eval_MFISNet_pde_solver_refinement_v1.py \
+        --ref_data_dir_base "${ref_data_dir_base}" \
+        --pred_data_dir_base "${pred_input_data_dir}" \
+        --data_input_nus $data_input_nus \
+        {{ use_which_targets }} \
+        {{ truncate_num_val }} \
+        --eval_on_set val \
+        --manual_model_fp "${central_model_fp}" \
+        --model_dir "${model_dir}" \
+        --training_results_fp "${training_results_fp}" \
+        --training_results_key $selection_field_name \
+        --use_epoch ${epoch_choice} \
+        --test_output_summary_fp "${val_output_summary_fp}" \
+        --test_output_predictions_dir "${val_output_predictions_dir}" \
+        {{ noise_to_signal_ratio }} \
+        {{ use_noise_seed }} \
+        {{ noise_seed_val }} \
+        {{ samples_per_chunk }} \
+        {{ eval_batch_size }} \
+        {{ use_pred_d_mh }} \
+        {{ seed }} \
+        {{ debug }}
+
+    # Test
+    >&2 echo "Evaluate on the test set..."
+    python eval_MFISNet_pde_solver_refinement_v1.py \
+        --ref_data_dir_base "${ref_data_dir_base}" \
+        --pred_data_dir_base "${pred_input_data_dir}" \
+        --data_input_nus $data_input_nus \
+        {{ use_which_targets }} \
+        {{ truncate_num_test }} \
+        --eval_on_set test \
+        --manual_model_fp "${central_model_fp}" \
+        --model_dir "${model_dir}" \
+        --training_results_fp "${training_results_fp}" \
+        --training_results_key $selection_field_name \
+        --use_epoch ${epoch_choice} \
+        --test_output_summary_fp "${test_output_summary_fp}" \
+        --test_output_predictions_dir "${test_output_predictions_dir}" \
+        {{ noise_to_signal_ratio }} \
+        {{ use_noise_seed }} \
+        {{ noise_seed_test }} \
+        {{ samples_per_chunk }} \
+        {{ eval_batch_size }} \
+        {{ use_pred_d_mh }} \
+        {{ seed }} \
+        {{ debug }}
+    >&2 echo "All finished!"
+
+    # If requested, delete the unused model files...
+    if [[ "{{delete_unused_models}}" == "true" ]]; then
+        # >&2 echo "Skipping the deletion step for now"
+        # >&2 echo "Proposal: delete models in directory ${model_dir}:"
+        # >&2 ls ${model_dir}
+        alt_model_dir_pattern=$(echo ${model_dir} | sed "s/arch_.*_opt.*/arch_*_opt_*/g")
+        >&2 echo "Deleting directories matching pattern ${alt_model_dir_pattern}..."
+        >&2 ls -d ${alt_model_dir_pattern}
+        rm -rf ${alt_model_dir_pattern}
+    fi
+fi

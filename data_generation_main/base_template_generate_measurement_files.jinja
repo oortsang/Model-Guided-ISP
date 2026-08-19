@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+#SBATCH --time={{ job_walltime }}
+#SBATCH --partition={{ partition }}
+#SBATCH --gres=gpu:{{ num_gpu }}
+#SBATCH --gpus={{ num_gpu }}
+#SBATCH --nodes={{ num_nodes }}
+#SBATCH --exclude={{ exclude_node }}
+#SBATCH --cpus-per-task={{ num_cpu }}
+#SBATCH --mem={{ mem }}
+#SBATCH --output={{ log_dir }}/{{ job_name }}.out
+#SBATCH --error={{ log_dir }}/{{ job_name }}.err
+#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-user={{ mail_user }}
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+echo "    CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+which python
+nvidia-smi -L
+mkdir -p "{{ output_dir }}"
+
+# --input_dir and --output_fp are hard-coded into the base template
+# so that we can handle the directories properly with quotation marks
+{{ command }} \
+    --input_dir "{{ input_dir }}" \
+    --output_fp "{{ output_fp }}" \
+    {{ global_idx_start }} \
+    {{ global_n_samples }} \
+    {{ nu_source_freq }} \
+    {{ rtol }} \
+    {{ batch_size }} \
+    {{ solver_type }} \
+    {{ hps_l }} \
+    {{ hps_p }} \
+    {{ hps_comp_domain_factor }} \
+    {{ hps_sd_mat_dir }} \
+    {{ linsys_solver }} \
+    {{ use_half_grid }} \
+    {{ half_grid_tol_ratio }} \
+    {{ max_iter }} \
+    {{ restart }} \
+    {{ bicgstab_restart }} \
+    {{ receiver_radius }} \
+    {{ start_idx }} \
+    {{ create_n_samples }} \
+    {{ write_every_n }} \
+    {{ debug }} \
+    {{ wandb_entity }} \
+    {{ wandb_project }} \
+    {{ wandb_mode }}
+
+echo "Exiting"

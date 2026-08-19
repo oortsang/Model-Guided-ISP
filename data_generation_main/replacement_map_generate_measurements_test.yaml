@@ -1,0 +1,51 @@
+# Consolidated measurement generation for the test split -- see
+# yaml_config_generate_measurements_train.yaml for the full rationale.
+# This is a VALUES file, not a resolved badger config: run it through
+# replace_fields_in_chevrons.py against template-file to produce out-file,
+# then feed out-file to call_badger.sh. Not run automatically.
+# Usage:
+# 1. Prepare badger yaml: replace_fields_in_chevrons.py <this-file>
+# 2. Launch: python -m badger  <out-file>
+
+template-file: data_generation_main/badger_template_generate_measurement_files.yaml
+out-file:      data_generation_main/badger_generate_measurements_test.yaml
+
+# Make sure to check these!
+run-date: 2026-08-05
+nu-sf: '1,2,3,4,5,6,7,8,9,10'
+
+wandb-project: "2026-08-05_consolidated_dataset_generation"
+
+# General info
+rlc-repo: /home-nfs/oortsang/rlc-repo
+predictions-rel-dir: consolidated_dataset
+dset: test
+input-scobj-dir: ""
+output-meas-dir: measurements
+wandb-mode: offline
+
+# Slurm/badger stuff
+logs-rel-dir: logs/consolidated_dataset_generation/
+partition: "low-gpu,gpu,willett-gpu"
+jobs-rel-dir: jobs/consolidated_dataset_generation
+badger-fake-submission: false
+badger-overwrite-scripts: true
+
+# File settings
+# Note: safe to lower in case jobs are not finishing
+num-samples: 1000
+samples-per-chunk: 250
+write-every-n: 10
+
+job-name-format: "consolidated_dataset_<<dset>>_measurements_nu_{nu_sf}_meas_{input_label}"
+
+# Solver settings
+rho-max: 0.575
+solver-type: ls # hps
+rtol: 1e-4
+linsys-solver: bicgstab
+use-half-grid: "true"
+half-grid-tol-ratio: 0.5
+max-iter: 1000000
+bicgstab-restart: 1000
+restart: 1000 # this is meant for gmres

@@ -30,7 +30,7 @@ definitions:
 
   default_arguments:
     log_dir: logs/consolidated_dataset_generation/
-    partition: low-gpu,gpu,willett-gpu
+    partition: low-gpu,gpu
     num_nodes: 1
     num_gpu: 1
     num_cpu: 4

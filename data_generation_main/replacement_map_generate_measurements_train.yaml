@@ -24,7 +24,7 @@ wandb-mode: offline
 
 # Slurm/badger stuff (note: slurm expects jobs/logs directories to exist already)
 logs-rel-dir: logs/consolidated_dataset_generation/
-partition: "low-gpu,gpu,willett-gpu"
+partition: "low-gpu,gpu"
 jobs-rel-dir: jobs/consolidated_dataset_generation
 badger-fake-submission: false
 badger-overwrite-scripts: true

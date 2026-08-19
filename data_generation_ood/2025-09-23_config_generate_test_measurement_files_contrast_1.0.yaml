@@ -15,7 +15,7 @@ definitions:
 
   default_arguments:
     log_dir: logs/gen_data_ood/
-    partition: gpu,willett-gpu
+    partition: gpu
     num_nodes: 1
     num_gpu: 1
     num_cpu: 4

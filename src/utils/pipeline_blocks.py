@@ -655,8 +655,7 @@ class MMGTaskPipeline(TaskPipeline):
         is dependent on the previous one
         Differs from SequentialTasks' submission for printing purposes
         """
-        # 1. Parse the command str to get the relevant subset of tasks to run...
-        # TODO
+        # 1. Parse the command str to get the relevant subset of tasks to run
         if verbosity >= 1:
             print(f"Received command_str={command_str}")
 
@@ -705,17 +704,11 @@ class MMGTaskPipeline(TaskPipeline):
                     # subtask_code = re.sub(f"[f]?[0-9{freq_idx}]+", "", next_command)
                     subtask_code = re.sub(f"[f]?{freq_idx}", "", next_command, count=1)
 
-                    # # Infer subtask code if needed
-                    # if len(subtask_code) == 0:
-                    #     subtask_code = re.sub(r"[f]?[0-9]+", "", code_obj.code)
                     selected_block = None
                     if len(subtask_code) == 0:
                         # Use the original block with no adjustment
                         selected_block = freq_block_task
                     else:
-                        # if verbosity >= VLVL_RUN_PLAN+1:
-                        #     print(f"f{freq_idx} using subtask code {subtask_code}")
-
                         # Collect the relevant subtasks...
                         subtask_queue = list(subtask_code)
                         next_subtask_code = subtask_queue.pop(0)
@@ -726,12 +719,10 @@ class MMGTaskPipeline(TaskPipeline):
                             # for each subtask from the full selection of subtasks
                             # attempt to match against the requested code
                             fb_subtask_code, fb_subtask_obj = fb_subtask.get_codes()
-                            # print(f"fb_subtask_code={fb_subtask_code} vs. next_subtask_code={next_subtask_code}")
 
                             # In case of a match...
                             if fb_subtask_code == next_subtask_code:
                                 # Add to selected_subtask_list
-                                # print(f"Adding {fb_subtask_obj.curr_task}")
                                 selected_subtask_list.append(fb_subtask_obj.curr_task)
 
                                 # Pop from the queue and keep going
@@ -789,8 +780,6 @@ class MMGTaskPipeline(TaskPipeline):
 
         if verbosity >= VLVL_ALL_JOBS:
             print(f"All pipeline jobs encountered: {' '.join(map(str, all_job_id_list))}")
-        # out_dependency_list = curr_dep_list
-        # return out_dependency_list
         return all_job_id_list, all_job_id_list
 
 ### Can write an alternate version for mpsr settings or other stuff that come up later ###
@@ -809,11 +798,9 @@ def get_standard_mmg_settings(rlc_repo_dir: str, rlc_data_dir: str = None):
         "models-rel-dir":           f"{rlc_data_dir}/mmg_pipeline/models",
         "central-rel-dir":          f"{rlc_data_dir}/mmg_pipeline/central_run_info",
         # Slurm stuff
-        # "logs-rel-dir":             "logs/mmg_pipeline/train_mmgu",
-        # "jobs-rel-dir":             "jobs/mmg_pipeline/train_mmgu",
         "logs-rel-dir-base":        "logs/mmg_pipeline",
         "jobs-rel-dir-base":        "jobs/mmg_pipeline",
-        "partition":                "gpu,willett-gpu",
+        "partition":                "gpu",
         "badger-fake-submission":   "true",
         "badger-overwrite-scripts": "true",
         "mail-type":                "NONE",
@@ -884,12 +871,6 @@ def setup_basic_mmg_pipeline(
     one less than the total number of blocks
     """
     pipeline_name   = pipeline_name if pipeline_name is not None else "Basic Pipeline"
-    # init_block_copy = copy_and_name("f1", init_block)
-    # iter_block_list = [
-    #     copy_and_name(f"f{i}", iter_block)
-    #     for i in range(2, 2+iter_count)
-    # ]
-    # pipeline_tasks = [init_block_copy, *iter_block_list]
     pipeline_tasks = setup_basic_pipeline_tasks(init_block, iter_block, iter_count)
 
     basic_pipeline = MMGTaskPipeline(

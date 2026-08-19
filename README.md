@@ -3,7 +3,7 @@ Code and experiments for the preprint "A Model-Guided Neural Network Method for 
 
 Written by [Olivia Tsang](http://github.com/oortsang), [Owen Melia](https://meliao.github.io), [Vasileios Charisopoulos](https://people.ece.uw.edu/vasilis/index.html), [Jeremy Hoskins](http://www.jghoskins.com/), [Yuehaw Khoo](https://www.stat.uchicago.edu/~ykhoo/), and [Rebecca Willett](https://willett.psd.uchicago.edu/).
 
-This code repository was written jointly by Olivia Tsang and Owen Melia, adapted from the [MFISNets repository](https://github.com/meliao/mfisnets) for our previous paper on [multi-frequency progressive refinement](https://arxiv.org/abs/2405.13214) built using the [`jaxhps`](https://github.com/meliao/jaxhps) solver.
+This code repository was written jointly by Olivia Tsang and Owen Melia, adapted from the [MFISNets repository](https://github.com/meliao/mfisnets) for our previous paper on [neural networks using multi-frequency progressive refinement](https://arxiv.org/abs/2405.13214) built using the [`jaxhps`](https://github.com/meliao/jaxhps) solver.
 The repository is focused on a model-guided neural network, HPS-CNN, which seeks to achieve fast, high-quality reconstructions by incorporating physical knowledge of the forward model with prior knowledge of the target scattering potentials. The architecture involves an alternating sequence of learned components (an initial FYNet block, proposed by [Fan and Ying (2022)](https://doi.org/10.4310/AMSA.2022.v7.n1.a2), and 2D CNNs later on) and calls to a numerical PDE solver (HPS, see [Melia et al. (2026)](https://doi.org/10.1016/j.jcp.2025.114549) for details).
 Additionally, this repository contains a custom implementation of the recursive linearization algorithm as a classical, non-machine-learning baseline ([Chen (1995)](https://www.cs.yale.edu/publications/techreports/tr1088.pdf), [Borges et al. (2017)](16M1093562)).
 
@@ -12,25 +12,8 @@ The inverse scattering problem is a computationally challenging reconstruction t
 
 In the paper, we develop a method that recovers high-quality reconstructions orders of magnitude more quickly than classical baselines. To this end, we embed a forward model--as a differential PDE solver--into a neural network architecture. This strategy leverages both physical knowledge of the wave scattering model and prior knowledge of imaging targets learned from training data.
 
-Our proposed architecture, HPS-CNN, is illustrated below. It produces an initial estimate from low-frequency measurements, using FYNet, and progressively refines the estimate using data of increasing frequencies. In particular, each refinement step involves both a fixed, physics-based component, and a learned neural network. We use a Hierarchical Poincare-Steklov (HPS) numerical PDE solver for the physics-based component and a 2D CNN for the learned component:
+Our proposed architecture, HPS-CNN, is illustrated below. It produces an initial estimate from low-frequency measurements, using FYNet, and progressively refines the estimate using data of increasing frequencies. In particular, each refinement step involves both a fixed, physics-based component, and a learned neural network. We use a Hierarchical Poincar\'e-Steklov (HPS) numerical PDE solver for the physics-based component and a 2D CNN for the learned component:
 ![Architecture of the HPS-CNN Refinement block](.github/assets/hpscnn-assets/hpscnn_architecture_both.svg)
-
-<!-- See our paper for the further discussion. -->
-
-## Citation
-If this code is helpful to your research, please cite our pre-print (and stay tuned for the forthcoming published version):
-
-```
-@misc{tsang2025modelguidedneuralnetworkmethod,
-    title={A Model-Guided Neural Network Method for the Inverse Scattering Problem}, 
-    author={Olivia Tsang and Owen Melia and Vasileios Charisopoulos and Jeremy Hoskins and Yuehaw Khoo and Rebecca Willett},
-    year={2025},
-    eprint={2512.10123},
-    archivePrefix={arXiv},
-    primaryClass={physics.comp-ph},
-    url={https://arxiv.org/abs/2512.10123}, 
-}
-```
 
 ## Repository overview
 This repository contains several neural network models, as well as several other supporting components.
@@ -142,7 +125,7 @@ The measurement files are saved in hdf5 format, with all of the fields in the sc
  * `h_vals`: Coordinates of the (m, h) transformed data.
 
 ## Dataset generation
-The dataset uses the same scattering potentials outlined in [multi-frequency progressive refinement](https://arxiv.org/abs/2405.13214). The PDE solver to generate the measurement files, located in `solvers/integral_equation`, sets up an integral equation derived from the Lippmann-Schwinger equation. The resulting linear system is solved to a relative tolerance of 1e-4 by a custom, GPU-ready implementation of BiCGSTAB in PyTorch.
+The dataset uses the same scattering potentials outlined by [Melia et al. (2025)](https://arxiv.org/abs/2405.13214). The PDE solver to generate the measurement files, located in `solvers/integral_equation`, sets up an integral equation derived from the Lippmann-Schwinger equation. The resulting linear system is solved to a relative tolerance of 1e-4 by a custom, GPU-ready implementation of BiCGSTAB in PyTorch.
 Note that this is a different solver from what we use in HPS-CNN, so we avoid an inverse crime.
 
 The scripts used to generate the dataset are located in `data_generation_main` and `data_generation_ood`.
@@ -151,20 +134,17 @@ The scripts used to generate the dataset are located in `data_generation_main` a
 Within the code, we adopt somewhat different naming from the paper (some of these were changed later). We refer to the "negative gradient of error in measurement space" as the "measurement misfit gradient," or abbreviated as "MMG." Similarly, the learned component of the refinement blocks is named "MMGUBlock" for "MMG Update Block." Additionally, we invoke FYNet blocks using the MFISNet-Fused interface from our previous work, as it is strictly more general.
 
 
+## Citation
+If this code is helpful to your research, please cite our pre-print (and stay tuned for the forthcoming published version):
 
----------- from old readme ----------
-
-
-
-This code repository was written jointly by Owen Melia and Olivia Tsang.
-
-Multi-Frequency Inverse Scattering Networks (MFISNets) are designed to solve multi-frequency inverse scattering problems, as depicted below. In these types of problems, the neural network is trained to reconstruct a scattering potential given observations of the forward wave scattering model at multiple frequencies $\{k_1, k_2, ...\}$. We provide code to generate scattering potentials, simulate scattered wave data measurements, and define and train MFISNets.
-![image](.github/assets/data_setup_cartoon.png)
-
-
-Our main architecture is MFISNet-Refinement, which is defined by an initial neural network block, followed by a series of refinement blocks. This architecture was loosely inspired by recursive linearization algorithms for inverse scattering.
-![image](.github/assets/mfisnet_refinement_architecture.png)
-
-Each refinement block is a simple update to a previously-published architecture, FYNet:
-![image](.github/assets/refinementblock_architecture.png)
-
+```
+@misc{tsang2025modelguidedneuralnetworkmethod,
+    title={A Model-Guided Neural Network Method for the Inverse Scattering Problem}, 
+    author={Olivia Tsang and Owen Melia and Vasileios Charisopoulos and Jeremy Hoskins and Yuehaw Khoo and Rebecca Willett},
+    year={2025},
+    eprint={2512.10123},
+    archivePrefix={arXiv},
+    primaryClass={physics.comp-ph},
+    url={https://arxiv.org/abs/2512.10123}, 
+}
+```

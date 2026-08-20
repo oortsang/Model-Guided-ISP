@@ -19,8 +19,8 @@ The learned component uses a 2D CNN that takes in the output from the PDE solver
 
 ![Architecture of the HPS-CNN Refinement block](.github/assets/hpscnn-assets/hpscnn_architecture_both.svg)
 
-Our experiments find that the HPS-CNN model is able to recover accurate reconstructions much faster than the classical baseline (~100x faster).
-As compared to pure neural network methods, it achieves much lower errors (about 5-6x lower) for a given size of training set; alternatively, it can achieve a designated error level with significantly fewer training points (roughly 30x fewer).
+Our experiments find that the HPS-CNN model is able to recover accurate reconstructions with a substantial speedup compared with the classical baseline (~100x faster).
+As compared to pure neural network methods, it achieves lower errors (about 5-6x lower) for a given size of training set; alternatively, it can achieve a designated error level with fewer training points (roughly 30x fewer).
 
 Here is a plot comparing different methods by their average error on the test set and how much time is spent per test sample:
 

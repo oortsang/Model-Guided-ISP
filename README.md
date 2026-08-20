@@ -96,7 +96,7 @@ In case you need to inspect individual files, the pipeline generation command cr
 The RecLin baseline can be invoked using [Badger](https://github.com/oortsang/badger-modified) as `python -m badger experiments/2025-10-31_config_rl_mod_{noise,ood}.yaml`. Note that you may need to set up the `logs/rl/` directory ahead of time for the Slurm submission to work; we offer a `make_log_dirs.sh` script to automatically create this directory, along with other log directories that may be required for the other experiments.
 
 ## Dataset
-The dataset will be made available [via Zenodo](https://doi.org/10.5281/zenodo.21939523) (note: link may not be live yet). There are up to 10,000 scattering potentials in the training set and 1,000 in each of the validation and test sets. The measurements correspond to $\nu={k}/{2\pi}=1,2,3,\dots,10$ (i.e., the wavelength goes from 1 per domain sidelength to 10 per domain sidelength).
+The dataset will be made available [via Zenodo](https://doi.org/10.5281/zenodo.21939523) (note: link may not be live yet). There are up to 10,000 scattering potentials in the training set and 1,000 in each of the validation and test sets. The measurements correspond to $\nu=k/2\pi=1,2,3,\dots,10$ (i.e., the wavelength goes from 1 per domain sidelength to 10 per domain sidelength).
 
 ```
 dataset/
@@ -113,7 +113,7 @@ dataset/
 └── test_measurements_nu_*/
     └── measurements_*.h5
 ```
-Before use, the dataset must be expanded using `do_expand_dataset.py`. This copies scattering potentials into the measurement files, as well as preparing representations in alternate coordinate representations (for FYNet) and applying low-pass-filters for the MFISNet training targets.  (TODO: provide a pre-configured script as well)
+Before use, the dataset must be expanded using `do_expand_dataset.py`. This copies scattering potentials into the measurement files, as well as preparing representations in alternate coordinate representations (for FYNet) and applying low-pass-filters for the MFISNet training targets.
 
 The scattering object files are saved in hdf5 format, with the following fields:
  * `q_cart`: the scattering potentials sampled on a Cartesian grid.

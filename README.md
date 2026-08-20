@@ -13,9 +13,24 @@ The inverse scattering problem is a computationally challenging reconstruction t
 
 In the paper, we develop a method that recovers high-quality reconstructions orders of magnitude more quickly than classical baselines. To this end, we embed a forward model--as a differential PDE solver--into a neural network architecture. This strategy leverages both physical knowledge of the wave scattering model and prior knowledge of imaging targets learned from training data.
 
-Our proposed architecture, HPS-CNN, is illustrated below. It produces an initial estimate from low-frequency measurements, using FYNet, and progressively refines the estimate using data of increasing frequencies. In particular, each refinement step involves both a fixed, physics-based component, and a learned neural network. We use a [GPU-accelerated PDE solver based on the Hierarchical Poincaré-Steklov (HPS) method](https://github.com/meliao/jaxhps) for the physics-based component and a 2D CNN for the learned component:
+Our proposed architecture, HPS-CNN, is illustrated below. It produces an initial estimate from low-frequency measurements, using FYNet, and progressively refines the estimate using data of increasing frequencies. In particular, each refinement step receives the previous frequency's estimate and processes it first with a fixed, physics-based component, then with a learned neural network.
+The physics-based component uses a [GPU-accelerated PDE solver based on the Hierarchical Poincaré-Steklov (HPS) method](https://github.com/meliao/jaxhps). Specifically, it computes a quantity that is equivalent to the negative gradient of the incoming estimate's error in measurement space with respect to the true observations for that frequency.
+The learned component uses a 2D CNN that takes in the output from the PDE solver, as well as the estimate from the previous frequency.
 
 ![Architecture of the HPS-CNN Refinement block](.github/assets/hpscnn-assets/hpscnn_architecture_both.svg)
+
+Our experiments find that the HPS-CNN model is able to recover accurate reconstructions much faster than the classical baseline (~100x faster).
+As compared to pure neural network methods, it achieves much lower errors (about 5-6x lower) for a given size of training set; alternatively, it can achieve a designated error level with significantly fewer training points (roughly 30x fewer).
+
+Here is a plot comparing different methods by their average error on the test set and how much time is spent per test sample:
+
+![A plot indicating the l2 errors and inference times of different methods](.github/assets/hpscnn-assets/rev_err_vs_time_built.svg)
+
+Here is a plot depicting how the different machine learning methods' performance scales with training data:
+
+![A plot indicating how the different methods scale with different amounts of training data](.github/assets/hpscnn-assets/rev_sample_complexity_built.svg)
+
+Please see our paper for the experiment setup and discussion of the results.
 
 ## Repository overview
 This repository contains several neural network models, as well as several other supporting components.

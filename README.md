@@ -88,7 +88,7 @@ example_config_file='experiments/hpscnn/2025-10-02_mmg_pipeline_train_mmgu_Nk_10
 # Prepare Slurm jobs and a pipeline plan file (optional but recommended)
 python generate_pipeline_scripts.py ${example_config_file}
 # Submit the pipeline to Slurm
-python submit_pipeline_scripts.py --use-pickled-pipeline ${example_config_file}
+python submit_pipeline_scripts.py --use-pickled-pipeline=true ${example_config_file}
 ```
 The pipeline generation step parses the configuration file and prepares Slurm scripts, then saves a pickled copy of the pipeline plan. The pipeline submission command submits a collection of jobs to Slurm and handles the dependencies between steps. This typically requires no further intervention (unless a job fails), but it is also possible to submit a subset of the underlying tasks with the `--command-str` command (for example, `--command-str="f1 f2s"` will run the first frequency block followed by just the solver task in the second frequency block; additional information, including these character codes, is available in `src/utils/pipeline_utils.py` and `src/utils/pipeline_blocks.py`).
 
@@ -100,6 +100,9 @@ The RecLin baseline can be invoked using [Badger](https://github.com/oortsang/ba
 ## Dataset
 The dataset will be made available [via Zenodo](https://doi.org/10.5281/zenodo.21939523) (note: link may not be live yet). There are up to 10,000 scattering potentials in the training set and 1,000 in each of the validation and test sets. The measurements correspond to $\nu=k/2\pi=1,2,3,\dots,10$ (i.e., the wavelength goes from 1 per domain sidelength to 10 per domain sidelength).
 
+Before use, the dataset must be expanded using `expand_main_dataset.sh` and `expand_ood_dataset.sh` (by default, these target `2026-08-17_main_dataset` and `2026-08-17_ood_dataset`, which is the default destination when extracting the tarball files provided on Zenodo). This copies scattering potentials into the measurement files, as well as preparing representations in alternate coordinate representations (for FYNet) and applying low-pass-filters for the MFISNet training targets.
+
+The main dataset has the following structure:
 ```
 dataset/
 ├── train_scattering_objs/
@@ -115,7 +118,15 @@ dataset/
 └── test_measurements_nu_*/
     └── measurements_*.h5
 ```
-Before use, the dataset must be expanded using `do_expand_dataset.py`. This copies scattering potentials into the measurement files, as well as preparing representations in alternate coordinate representations (for FYNet) and applying low-pass-filters for the MFISNet training targets.
+while the out-of-distribution dataset has the structure:
+```
+ood_dataset/
+├── 2025-09-23_ood_contrast_*/
+   ├── test_scattering_objs/
+   │   └── scattering_objs_*.h5
+   └── test_measurements_nu_*/
+        └── scattering_objs_*.h5
+```
 
 The scattering object files are saved in hdf5 format, with the following fields:
  * `q_cart`: the scattering potentials sampled on a Cartesian grid.

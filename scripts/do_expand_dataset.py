@@ -1,4 +1,4 @@
-# Regenerate fields dropped by do_shrink_dataset.py
+# Regenerate fields dropped by scripts/do_shrink_dataset.py
 # (q_polar in scattering-object files; q_cart, q_polar, q_cart_lpf,
 # q_polar_lpf, d_mh in measurement files), mutating the dataset in place.
 #
@@ -6,17 +6,20 @@
 # --exists-ok to force recomputing/overwriting fields that are already
 # present.
 #
-# Example:
-#   python do_expand_dataset.py \
+# Example (run from the repo root):
+#   python scripts/do_expand_dataset.py \
 #       --base-dir /path/to/shrunk_dataset \
 #       --nu 1 2 3 --subsets train val test --backend jax
 
 import argparse
 import logging
+import os
+import sys
 
 import numpy as np
 import torch
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.data.layout import RefDatasetLayout
 from src.data.data_io import load_field_in_hdf5
 from src.data.data_naming_constants import X_VALS, THETA_VALS, RHO_VALS, H_VALS, NU_SF
@@ -62,7 +65,7 @@ def setup_args() -> argparse.Namespace:
     parser.add_argument(
         "--sparse-x",
         choices=bool_choices,
-        default="false",
+        default="true",
         help="Only used with --backend jax: makes the x-side interpolation "
         "operator sparse (BCSR); y is always dense regardless",
     )

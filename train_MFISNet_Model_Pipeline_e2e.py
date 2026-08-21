@@ -29,7 +29,6 @@ from src.models.MFISNet_pde_solver_refinement_v1 import (
     MFISNet_pde_solver_refinement_v1,
     load_MFISNet_pde_solver_refinement_v1_from_state_dict,
 )
-# from train_MFISNet_Fused import setup_single_dataset, LinearData
 
 from src.models.MFISNet_Model_Pipeline import (
     MFISNet_Model_Pipeline,

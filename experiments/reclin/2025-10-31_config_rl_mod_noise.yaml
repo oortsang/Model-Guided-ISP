@@ -1,0 +1,276 @@
+---
+definitions:
+  command: python run_recursive_linearization.py
+  template: base_template_run_recursive_linearization.jinja
+  copy_to_item: true
+  default_arguments:
+    mem: "50G"
+    logs_folder: logs/rl
+    partition: "low-gpu"
+    num_nodes: 1
+    num_cpu: 2
+    num_gpu: 1
+    job_walltime: "8:00:00"
+    mail_type: "NONE"
+    mail_user: ""
+  submission:
+    !SLURMQueue
+      jobs_folder: jobs/rl
+      job_name_key: log_name
+      fake_submission: false
+      overwrite_scripts: true
+  constants:
+    base_dir: &BASE_DIR "/home-nfs/oortsang/rlc-repo"
+    pred_dir: &PRED_DIR "/home-nfs/oortsang/rlc-repo/rlc_data/predictions"
+    ref_scobj_dir: &REF_SCOBJ_DIR "/home-nfs/oortsang/rlc-repo/dataset"
+    input_meas_dir: &INPUT_MEAS_DIR "/home-nfs/oortsang/rlc-repo/dataset"
+    init_scobj_dir: &INIT_SCOBJ_DIR ""
+    dset: &DSET "test"
+    num_samples: &NUM_SAMPLES 1000
+    chunk_size:  &CHUNK_SIZE 50
+
+arguments:
+  - !Scalar
+    name: run_date
+    value: 2025-10-31
+    metadata_rules: [ !SaveValueInMetadata { path: run_date } ]
+
+  - !Scalar
+    name: num_samples
+    value: *NUM_SAMPLES
+
+  - !Scalar
+    name: chunk_size
+    value: *CHUNK_SIZE
+
+  - !Scalar
+    name: data_input_nus
+    value: "(1,2,3,4,5,6,7,8,9,10)"
+
+  - !Scalar { name: base_dir, value: *BASE_DIR}
+  - !Scalar { name: pred_dir, value: *PRED_DIR, metadata_rules: [!SaveValueInMetadata {path: pred_dir}] }
+  - !Scalar { name: ref_scobj_dir, prefix: "--ref_scobj_dir", value: *REF_SCOBJ_DIR }
+  - !Scalar { name: input_meas_dir, prefix: "--input_meas_dir", value: *INPUT_MEAS_DIR }
+  - !Scalar { name: init_scobj_dir, prefix: "--init_scobj_dir", value: *INIT_SCOBJ_DIR }
+  - !Scalar { name: dset, prefix: "--dset", value: *DSET, metadata_rules: [!SaveValueInMetadata {path: dset}] }
+  - !Scalar { name: debug, value: "--debug" }
+  - !Range
+    name: noise_level
+    values:
+      - 0.0
+      - 0.1
+      - 0.2
+      - 0.3
+      - 0.4
+      - 0.5
+      - 0.6
+      - 0.7
+      - 0.8
+      - 0.9
+      - 1.0
+    metadata_rules: [ !SaveValueInMetadata {path: noise_level } ]
+
+  - !ArgumentFromMetadata
+    name: noise_to_signal_ratio
+    prefix: "--noise_to_signal_ratio"
+    format_rule: "{noise_level}"
+    sources: [
+        { path: noise_level, destination: noise_level },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: noise_to_signal_ratio } ]
+
+  - !Scalar
+    name: use_noise_seed
+    value: "true"
+    prefix: "--use_noise_seed"
+
+  - !Scalar
+    name: noise_seed_list
+    prefix: "--noise_seed_list"
+    value: "30013221 30023221 30033221 30043221 30053221 30063221 30073221 30083221 30093221 30103221"
+
+  - !ArgumentFromMetadata
+    name: whole_run_name
+    format_rule: "rl_mod_noise_{noise_level}"
+    sources: [
+        { path: noise_level, destination: noise_level },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: whole_run_name } ]
+
+  - !Scalar { name: scobj_dir_format, prefix: "--scobj_dir_format", value: "{0}_scattering_objs" }
+  - !Scalar { name: input_meas_dir_format, prefix: "--input_meas_dir_format", value: "{0}_measurements_nu_{1}" }
+  - !Scalar { name: output_scobj_fp_format, prefix: "--output_scobj_fp_format", value: "scattering_objs_{0}.h5" }
+
+  - !Range
+    name: sample_idx_start
+    start: 0
+    step: *CHUNK_SIZE
+    end:  *NUM_SAMPLES
+    prefix: "--sample_idx_start"
+    metadata_rules: [ !SaveValueInMetadata { path: sample_idx_start } ]
+
+  - !Scalar
+    name: sample_idx_count
+    prefix: "--sample_idx_count"
+    value: *CHUNK_SIZE
+
+  # GN/RL settings
+  - !Range
+    name: gn_iters_per_freq
+    prefix: "--gn_iters_per_freq"
+    values: [ 2 ] # 2 gets lower overall errors but can be more sensitive to parameter choice..
+    metadata_rules: [ !SaveValueInMetadata { path: gn_iters_per_freq } ]
+  - !Range
+    name: gn_step_size
+    prefix: "--gn_step_size"
+    values: [ "1.0" ]
+    metadata_rules: [ !SaveValueInMetadata { path: gn_step_size } ]
+  - !Range
+    name: gn_eps
+    prefix: "--gn_eps"
+    values: [ "1e-2" ]
+    metadata_rules: [ !SaveValueInMetadata { path: gn_eps } ]
+  - !Range
+    name: cg_rtol
+    prefix: "--cg_rtol"
+    values: [ "1e-4" ] # seems fine
+    metadata_rules: [ !SaveValueInMetadata { path: cg_rtol } ]
+  - !Range
+    name: cg_max_iters
+    prefix: "--cg_max_iters"
+    values: [ 100 ] # seems fine
+    metadata_rules: [ !SaveValueInMetadata { path: cg_max_iters } ]
+
+  - !Range
+    name: fbp_override
+    prefix: "--fbp_override"
+    values: [ "true" ] # yes
+    metadata_rules: [ !SaveValueInMetadata { path: fbp_override } ]
+  - !Range
+    name: fbp_iters
+    prefix: "--fbp_iters"
+    values: [ 10 ]  # more is generally better
+    metadata_rules: [ !SaveValueInMetadata { path: fbp_iters } ]
+  - !Range
+    name: fbp_step_size
+    prefix: "--fbp_step_size"
+    values: [ "1.0" ]
+    metadata_rules: [ !SaveValueInMetadata { path: fbp_step_size } ]
+  - !Range
+    name: fbp_eps
+    prefix: "--fbp_eps"
+    values: [ "1e-4" ] # Still seems to be the best
+    metadata_rules: [ !SaveValueInMetadata { path: fbp_eps } ]
+  - !Scalar
+    name: allow_increase_error
+    prefix: "--allow_increase_error"
+    value: "false"
+    metadata_rules: [ !SaveValueInMetadata { path: allow_increase_error } ]
+
+
+  # HPS Settings
+  - !Range
+    name: hps_l
+    prefix: "--hps_l"
+    values: [ 3 ] # L=4 generally does not make a huge difference
+    metadata_rules: [ !SaveValueInMetadata { path: hps_l } ]
+  - !Scalar
+    name: hps_p
+    prefix: "--hps_p"
+    value: 16
+    metadata_rules: [ !SaveValueInMetadata { path: hps_p } ]
+  - !Scalar
+    name: hps_cdf
+    prefix: "--hps_comp_domain_factor"
+    value: 1.1
+    metadata_rules: [ !SaveValueInMetadata { path: hps_cdf } ]
+  - !Scalar
+    name: hps_sd_mat_dir
+    prefix: "--hps_sd_mat_dir"
+    value: "rlc_data/HPS_SD_matrices"
+
+  - !Scalar
+    name: receiver_radius
+    prefix: "--receiver_radius"
+    value: 100
+
+  - !Scalar
+    name: jax_mem_alloc_mb
+    prefix: "--jax_mem_alloc_mb"
+    value: 10240
+
+  # Logging/misc.
+  - !Scalar
+    name: check_scobj_err
+    prefix: "--check_scobj_err"
+    value: "true"
+  - !Scalar
+    name: check_meas_err
+    prefix: "--check_meas_err"
+    value: "false"
+  - !Scalar
+    name: overwrite_if_settings_change
+    prefix: "--overwrite_if_settings_change"
+    value: "true"
+
+  - !Scalar
+    name: write_every_n
+    prefix: "--write_every_n"
+    value: 10
+
+  # Below this point
+  # - parameters (for easy re-use)
+  # - job_name
+  # - log_name
+  # - output_scobj_dir
+  - !ArgumentFromMetadata
+    name: parameters
+    format_rule: "hps_{l}_{p}_rl_mod"
+    sources: [
+      { path: hps_l,             destination: l },
+      { path: hps_p,             destination: p },
+      { path: gn_iters_per_freq, destination: gn_iters },
+      { path: gn_step_size,      destination: gn_step_size },
+      { path: gn_eps,            destination: gn_eps },
+      { path: cg_max_iters,      destination: cg_iters },
+      { path: cg_rtol,           destination: cg_rtol },
+      { path: fbp_iters,         destination: fbp_iters },
+      { path: fbp_step_size,     destination: fbp_step_size },
+      { path: fbp_eps,           destination: fbp_eps },
+
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: parameters } ]
+
+  - !ArgumentFromMetadata
+    name: job_name
+    format_rule: "{run_date}_{whole_run_name}_{parameters}_{dset}_chunk_{idx}"
+    sources: [
+      { path: run_date,         destination: run_date },
+      { path: whole_run_name,   destination: whole_run_name },
+      { path: parameters,       destination: parameters },
+      { path: dset,             destination: dset },
+      { path: sample_idx_start, destination: idx },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: job_name } ]
+
+  - !ArgumentFromMetadata
+    name: log_name
+    format_rule: "{run_date}_{whole_run_name}_{parameters}_{dset}_chunk_{idx}"
+    sources: [
+      { path: run_date,         destination: run_date },
+      { path: whole_run_name,   destination: whole_run_name },
+      { path: parameters,       destination: parameters },
+      { path: dset,             destination: dset },
+      { path: sample_idx_start, destination: idx },
+    ]
+    metadata_rules: [ !SaveValueInMetadata { path: log_name } ]
+
+  - !ArgumentFromMetadata
+    name: output_scobj_dir
+    format_rule: "{pred_dir}/{run_date}_{whole_run_name}_{parameters}"
+    sources: [
+      { path: pred_dir,       destination: pred_dir },
+      { path: run_date,       destination: run_date },
+      { path: whole_run_name, destination: whole_run_name },
+      { path: parameters,     destination: parameters },
+    ]

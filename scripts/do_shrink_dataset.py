@@ -1,15 +1,15 @@
 # Shrink a dataset laid out per RefDatasetLayout by dropping fields that can
-# later be regenerated with do_expand_dataset.py.
+# later be regenerated with scripts/do_expand_dataset.py.
 #
-# Example (uniform truncation across every listed subset):
-#   python do_shrink_dataset.py \
+# Example (uniform truncation across every listed subset; run from the repo root):
+#   python scripts/do_shrink_dataset.py \
 #       --src-base-dir /path/to/dataset \
 #       --dst-base-dir /path/to/shrunk_dataset \
 #       --nu 1 2 3 --subsets train val test \
 #       --truncate-num 500 --n-workers 4
 #
 # Example (per-subset truncation, e.g. a bigger train set than val/test):
-#   python do_shrink_dataset.py \
+#   python scripts/do_shrink_dataset.py \
 #       --src-base-dir /path/to/dataset \
 #       --dst-base-dir /path/to/shrunk_dataset \
 #       --nu 1 2 3 --subsets train val test \
@@ -17,7 +17,10 @@
 
 import argparse
 import logging
+import os
+import sys
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.data.layout import RefDatasetLayout
 from src.data.shrink_dataset import copy_and_shrink_dataset
 from src.utils.logging_utils import FMT, TIMEFMT

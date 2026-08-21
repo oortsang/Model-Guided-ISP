@@ -7,10 +7,13 @@ import logging
 from typing import List
 import argparse
 import os
+import sys
 import time
 
 import numpy as np
 import torch
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.data.data_io import (
     load_single_dir_slice,
 )

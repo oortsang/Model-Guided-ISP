@@ -8,6 +8,7 @@
 set -euo pipefail
 
 dirs=(
+  logs/expand_dataset
   logs/gen_data_main
   logs/gen_data_ood
   logs/rl

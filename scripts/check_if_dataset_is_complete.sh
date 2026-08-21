@@ -2,12 +2,13 @@
 # Check all the HDF5 in a given dataset directory
 # Usage:
 # 1. Default:
-#     ./check_if_dataset_is_complete.sh dataset
+#     ./scripts/check_if_dataset_is_complete.sh dataset
 #     where the data files are something like dataset/train_measurement_nu_4/measurements_0.h5
 # 2. Specify the inner directories as a list or bash pattern (which gets expanded to a list)
-#     ./check_if_dataset_is_complete.sh dataset train_measurements_nu_{4,8}
-#     ./check_if_dataset_is_complete.sh dataset train_measurements_nu_4 train_measurements_nu_8 ...
+#     ./scripts/check_if_dataset_is_complete.sh dataset train_measurements_nu_{4,8}
+#     ./scripts/check_if_dataset_is_complete.sh dataset train_measurements_nu_4 train_measurements_nu_8 ...
 
+script_dir=$(dirname "$0")
 inner_dir_args=${@:2}
 
 dataset_base_dir=$1
@@ -24,7 +25,7 @@ complete_counter=0
 incomplete_counter=0
 for inner_dir_name in ${inner_dir_list}; do
     for file in ${inner_dir_name}/*.h5; do
-        completion=$(./check_if_datafile_is_complete.sh $file)
+        completion=$("${script_dir}/check_if_datafile_is_complete.sh" $file)
         # echo "${file}: ${completion}"
         if [[ ${completion} == "false" ]]; then
             incomplete_file_list+="- ${file}\n"

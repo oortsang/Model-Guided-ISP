@@ -75,7 +75,7 @@ The initial block is taken as an FYNet architecture, while subsequent refinement
 Since we process a single frequency at a time, the process can be separated into alternating training phases and HPS-application phases.
 This means we only need to call the HPS solver `N_samples*(N_k - 1)` times instead of `N_epochs*N_samples*(N_k-1)`, as an end-to-end strategy may require. Thus, the additional training cost incurred by including a PDE solver is relatively modest under this strategy.
 
-See `train_MFISNet_Fused.py`, `generate_meas_misfit_files.py`, and `train_MMGUBlock.py` for the block-wise training (and PDE solver application) scripts.
+See `train_MFISNet_Fused_new_interface.py`, `generate_meas_misfit_files.py`, and `train_MMGUBlock.py` for the block-wise training (and PDE solver application) scripts.
 
 ## Running pipelines
 Additionally, our training (and evaluation) pipeline takes advantage of the embarassingly parallel nature of the HPS-application phases by splitting up this task among a number of Slurm nodes; this is helpful to reduce the wall-clock time, especially for larger training sets (e.g., we go up to 10,000 training samples, each with 10 frequencies).

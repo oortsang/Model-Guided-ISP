@@ -43,7 +43,7 @@ from src.training_utils.loss_functions import (
     relative_l2_error,
     _mse_along_batch,
 )
-from train_MFISNet_Fused import setup_single_dataset
+from src.data.datasets import setup_dataset_linear as setup_single_dataset
 
 
 from src.utils.logging_utils import FMT, TIMEFMT, find_best_epoch
@@ -180,24 +180,6 @@ def setup_args() -> argparse.Namespace:
     a.timing_run = (a.timing_run == "true")
 
     return a
-
-
-class LinearData(torch.utils.data.Dataset):
-    def __init__(self, X: torch.Tensor, y: torch.Tensor) -> None:
-        self.X = X
-        self.y = y
-        logging.info(
-            "Initialized a LinearData instance with X shape: %s and y shape: %s",
-            self.X.shape,
-            self.y.shape,
-        )
-        self.n_samples = X.shape[0]
-
-    def __len__(self):
-        return self.n_samples
-
-    def __getitem__(self, idx):
-        return self.X[idx], self.y[idx]
 
 
 def main(args: argparse.Namespace) -> None:

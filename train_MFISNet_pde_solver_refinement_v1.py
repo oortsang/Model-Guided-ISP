@@ -171,41 +171,6 @@ def setup_args() -> argparse.Namespace:
 
     return a
 
-# def setup_pde_solver_refinement_dataset(
-#         pred_q_polar: np.ndarray,
-#         pred_d_mh: np.ndarray,
-#         ref_d_mh: np.ndarray,
-#         ref_q_polar: np.ndarray,
-#         ref_q_polar_orig: np.ndarray = None,
-#         use_pred_d_mh: bool = True,
-# ) -> TupleLinearData:
-#     """
-#     Set up a single (multi-frequency) dataset (such as training/eval)
-#     Parameters:
-#         pred_q_polar (np.ndarray): stack of scattering potential estimates
-#         pred_d_mh (np.ndarray): stack of wavefield patterns predicted from the previous scattering potential estimates
-#         ref_d_mh (np.ndarray): stack of true reference wavefield patterns (from the true scatterer)
-#         ref_q_polar (np.ndarray): stack of true (possibly smoothed) scattering objects
-#             These are used for training off of
-#         ref_q_polar_orig (np.ndarray): stack of original scattering objects
-#             These are used in the "final" logging values
-#     Return values:
-#         dset (LinearData): torch-ready data
-#     """
-#     # Treat them like different frequency channels
-#     # For now try inputting the reference and predicted difference
-#     if use_pred_d_mh and pred_d_mh is not None:
-#         stacked_d_mh = np.concatenate([pred_d_mh, pred_d_mh-ref_d_mh, ref_d_mh], axis=1)
-#     else:
-#         stacked_d_mh = ref_d_mh
-#     # stacked_d_mh  = ref_d_mh
-#     inputs_q_dset = torch.from_numpy(pred_q_polar)
-#     inputs_d_mh_dset = torch.view_as_real(torch.from_numpy(stacked_d_mh))
-#     targets_dset = torch.from_numpy(ref_q_polar)
-#     targets_orig_dset = torch.from_numpy(ref_q_polar_orig) if ref_q_polar_orig is not None else None
-#     dset = TupleLinearData(inputs_q_dset, inputs_d_mh_dset, targets_dset, targets_orig_dset)
-#     return dset
-
 def main(
     args: argparse.Namespace,
     # Extra arguments for testing purposes
@@ -226,7 +191,6 @@ def main(
     args.merge_middle_freq_channels_bool = mmfc_bool
     args.polar_padding_bool = polar_padding_bool
     # Adjust the learning rate according to which frequency-level we are at
-    # TODO: consider giving weight_decay similar behavior !
     lr_lvl_adjust = args.lr_decrease_factor ** (args.freq_lvl - 1)
     lr_init_eff = args.lr_init * lr_lvl_adjust
     eta_min_eff = args.eta_min * lr_lvl_adjust

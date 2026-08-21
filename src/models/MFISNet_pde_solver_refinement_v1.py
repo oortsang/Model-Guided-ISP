@@ -133,6 +133,10 @@ class MFISNet_pde_solver_refinement_v1(torch.nn.Module):
         else:
             num_fynet_channels_in = N_emb_channels_out + N_freqs
 
+        # Note: merge_middle_freq_channels, polar_padding, and set_c1d_per_freq
+        # are still accepted above for CLI/pipeline backward compatibility, but
+        # MFISNet_Fused no longer exposes those as options (it always merges
+        # channels, always polar-pads, and always uses a per-block channel count).
         self.fynet_block = MFISNet_Fused(
             N_h,
             N_rho,
@@ -143,11 +147,8 @@ class MFISNet_pde_solver_refinement_v1(torch.nn.Module):
             w_2d,
             N_cnn_1d,
             self.N_fynet_cnn_2d,
-            merge_middle_freq_channels,
             big_init,
-            polar_padding,
             init_mode=init_mode,
-            set_c1d_per_freq=set_c1d_per_freq,
         )
         logging.info(f"The FYNet block (as MFISNet-Fused) has {self.fynet_block.N_cnn_2d} 2D CNN layers")
 

@@ -12,8 +12,7 @@ this model is extended to accept multi-frequency data by treating
 data at each frequency as a different data channel. The 1D convolutions
 allow for interactions between the different frequencies, and all the
 data is merged into a single channel for the 2D conv filtering step.
-The input to the filtering step can also be left in multiple channels
-by marking merge_middle_freq_channels=False
+Like FYNet.py, 2D convolutions always use polar padding.
 
 The forward and inverse versions of the neural network
 to recover scattering objects from the measured wavefield patterns.
@@ -40,12 +39,8 @@ class MFISNet_Fused(torch.nn.Module):
         w_2d: int,
         N_cnn_1d: int,
         N_cnn_2d: int,
-        merge_middle_freq_channels: bool = True,
         big_init: bool = True,
-        polar_padding: bool = False,
         init_mode: str = None,
-        use_2d_cnn: bool = True,
-        set_c1d_per_freq: bool = True,
         **kwargs: dict,
     ) -> None:
         """
@@ -79,14 +74,12 @@ class MFISNet_Fused(torch.nn.Module):
         self.w_2d = w_2d
         self.N_cnn_1d = N_cnn_1d
         self.N_cnn_2d = N_cnn_2d
-        self.use_2d_cnn = use_2d_cnn
 
         self.big_init = big_init
         # self.nonneg_init = nonneg_init
         init_mode = init_mode.lower() if init_mode is not None else "original"
         self.init_mode = init_mode
         self.forward_network_bool = False
-        self.polar_padding = polar_padding
         self.weight_dtype = torch.complex64
         self.real_dtype   = torch.float32
 
@@ -111,8 +104,6 @@ class MFISNet_Fused(torch.nn.Module):
         self.train_outputs_mean = torch.nn.Parameter(train_outputs_mean, requires_grad=False)
         self.train_outputs_std  = torch.nn.Parameter(train_outputs_std, requires_grad=False)
 
-        logging.info(f"MFISNet-Fused received: polar_padding={polar_padding}")
-
         assert (
             self.w_2d % 2
         ), "I can't figure out how to do padding for kernel sizes divisible by 2"
@@ -120,11 +111,8 @@ class MFISNet_Fused(torch.nn.Module):
         padding_1d = int(self.w_1d / 2 - 1) + 1
         padding_2d = int(self.w_2d / 2 - 1) + 1
 
-        self.set_c1d_per_freq = set_c1d_per_freq
-        c1d_int_factor = self.N_freqs if set_c1d_per_freq else 1
-
         c_1d_in  = self.N_freqs * (self.N_h * 2)
-        c_1d_int = c1d_int_factor * self.c_1d # internal layers
+        c_1d_int = self.c_1d # internal layers
         c_1d_out = self.N_rho
         c_2d_in  = 1
         c_2d_int = self.c_2d
@@ -132,10 +120,6 @@ class MFISNet_Fused(torch.nn.Module):
 
         logging.info(f"c_1d_in={c_1d_in}, c_1d_int: {c_1d_int}, c_1d_out: {c_1d_out}")
         logging.info(f"c_2d_in={c_2d_in}, c_2d_int: {c_2d_int}, c_2d_out: {c_2d_out}")
-
-        if not merge_middle_freq_channels:
-            c_1d_out *= N_freqs
-            c_2d_in  *= N_freqs
 
         # Save parameter values for later reference
         self.c_1d_in  = c_1d_in
@@ -269,10 +253,7 @@ class MFISNet_Fused(torch.nn.Module):
 
         # 2D convolutions in the (N_M, N_H) plane
         for i, conv_2d_layer in enumerate(self.conv_2d_layers):
-            if self.polar_padding:
-                x = apply_conv_with_polar_padding(conv_2d_layer, x)
-            else:
-                x = conv_2d_layer(x)
+            x = apply_conv_with_polar_padding(conv_2d_layer, x)
             if i == self.N_cnn_2d - 1:
                 # Skip the last relu
                 break
@@ -294,11 +275,8 @@ class MFISNet_Fused(torch.nn.Module):
 def load_MFISNet_Fused_from_state_dict(
     state_dict: dict,
     N_freqs: int,
-    polar_padding: bool = True,
 ) -> MFISNet_Fused:
-    """Sets up a MFISNet-Fused model from the given state dictionary and number of frequencies
-    Also currently seems to require the polar padding
-    """
+    """Sets up a MFISNet-Fused model from the given state dictionary and number of frequencies"""
     # First, compute hyperparameters from the state dictionary
     layer_dims = {key:tuple(val.shape) for (key, val) in state_dict.items()}
     parameter_keys = list(state_dict.keys())
@@ -313,13 +291,9 @@ def load_MFISNet_Fused_from_state_dict(
     (c_2d_out, c_2d_int, _, _) = layer_dims[f"conv_2d_layers.{N_cnn_1d-1}.weight"]
 
     N_h  = c_1d_in // (2 * N_freqs)
-    c_1d = c_1d_int // N_freqs
+    c_1d = c_1d_int
     c_2d = c_2d_int
-    merge_middle_freq_channels = (c_2d_in < N_freqs) # merge operation would reduce channel count from N_freqs
-    if merge_middle_freq_channels:
-        N_rho = c_1d_out
-    else:
-        N_rho = c_1d_out // N_freqs
+    N_rho = c_1d_out
 
     extra_kwargs = {}
     if "train_inputs_mean" in state_dict.keys():
@@ -340,9 +314,7 @@ def load_MFISNet_Fused_from_state_dict(
         w_2d=w_2d,
         N_cnn_1d=N_cnn_1d,
         N_cnn_2d=N_cnn_2d,
-        merge_middle_freq_channels=merge_middle_freq_channels,
         big_init=True, # just use this as a default value but it doesn't really matter,
-        polar_padding=polar_padding,
         **extra_kwargs,
     )
 

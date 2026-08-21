@@ -37,8 +37,8 @@ This repository contains several neural network models, as well as several other
 
 - Neural network components:
   - CNN part of the HPS-CNN refinement block, in `src/models/MMGUBlock.py` (measurement misfit gradient update)
-  - MFISNet-Refinement baseline in `src/models/MFISNet_Refinement.py`
-  - `MFISNet_Model_Pipeline.py`
+  - MFISNet-Refinement baseline, trained/evaluated block-by-block via `src/models/MFISNet_Refinement_Block.py`
+  - `MFISNet_Model_Pipeline.py`, which glues together FYNet and MFISNet-Refinement blocks
 - Two differentiable PDE solvers:
   - an integral-equation solver based on the Lippmann-Schwinger equation using a PyTorch implementation of BiCGSTAB, located in `solvers/integral_equation`
   - an HPS-based solver using `jaxhps`, located in `solvers/hps/wave_scattering`

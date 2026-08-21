@@ -377,7 +377,7 @@ class TrainMRefBlock(SoloTask):
             self,
             ctx,
             fixed_settings,
-            in_badger_template_field="badger-template-train-mpsr",
+            in_badger_template_field="badger-template-train-refinement-block",
             block_badger_field="block-badger-fp",
             setup_field_mapping={
                 "input-pred-scobj-dir": LAST_OUTPUT_PRED_SCOBJ_DIR,
@@ -410,7 +410,7 @@ class EvalMRefBlock(SoloTask):
             self,
             ctx,
             fixed_settings,
-            in_badger_template_field="badger-template-eval-mpsr",
+            in_badger_template_field="badger-template-eval-refinement-block",
             block_badger_field="block-badger-fp",
             setup_field_mapping={
                 "input-pred-scobj-dir": LAST_OUTPUT_PRED_SCOBJ_DIR,
@@ -444,7 +444,7 @@ class TrainMRefPipeline(SoloTask):
             self,
             ctx,
             fixed_settings,
-            in_badger_template_field="badger-template-train-mpsr-pipe",
+            in_badger_template_field="badger-template-train-model-pipeline",
             block_badger_field="block-badger-fp",
             setup_field_mapping={},
             save_field_mapping={},
@@ -474,7 +474,7 @@ class EvalMRefPipeline(SoloTask):
             self,
             ctx,
             fixed_settings,
-            in_badger_template_field="badger-template-eval-mpsr-pipe",
+            in_badger_template_field="badger-template-eval-model-pipeline",
             block_badger_field="block-badger-fp",
             setup_field_mapping={
             },
@@ -798,7 +798,7 @@ def load_system_setup(config_fp: str = SYSTEM_SETUP_FP) -> dict:
     with open(config_fp, "r") as f:
         return yaml.safe_load(f) or {}
 
-### Can write an alternate version for mpsr settings or other stuff that come up later ###
+### Can write an alternate version for refinement-block settings or other stuff that come up later ###
 def get_standard_mmg_settings(repo_dir: str = None, rlc_data_dir: str = None):
     """Get the basic/standard settings for the mmg pipeline
     """
@@ -875,17 +875,17 @@ def get_standard_mmg_settings(repo_dir: str = None, rlc_data_dir: str = None):
         "base-template-eval-mmgu-gen":   "<<templates-rel-dir>>/base_template_eval_mmgublock_generalized.jinja",
         "badger-template-eval-mmgu-gen": "<<templates-rel-dir>>/badger_template_eval_mmgublock_generalized.yaml",
 
-        # MPSR/MRef stuff
-        "base-template-train-mpsr":    "<<templates-rel-dir>>/base_template_train_mpsr.jinja",
-        "badger-template-train-mpsr":  "<<templates-rel-dir>>/badger_template_train_mpsr.yaml",
-        "base-template-eval-mpsr":     "<<templates-rel-dir>>/base_template_eval_mpsr.jinja",
-        "badger-template-eval-mpsr":   "<<templates-rel-dir>>/badger_template_eval_mpsr.yaml",
+        # MFISNet-Refinement per-frequency block stuff
+        "base-template-train-refinement-block":    "<<templates-rel-dir>>/base_template_train_refinement_block.jinja",
+        "badger-template-train-refinement-block":  "<<templates-rel-dir>>/badger_template_train_refinement_block.yaml",
+        "base-template-eval-refinement-block":     "<<templates-rel-dir>>/base_template_eval_refinement_block.jinja",
+        "badger-template-eval-refinement-block":   "<<templates-rel-dir>>/badger_template_eval_refinement_block.yaml",
 
         # Model Pipeline e2e
-        "base-template-train-mpsr-pipe":    "<<templates-rel-dir>>/base_template_train_mpsr_pipe.jinja",
-        "badger-template-train-mpsr-pipe":  "<<templates-rel-dir>>/badger_template_train_mpsr_pipe.yaml",
-        "base-template-eval-mpsr-pipe":     "<<templates-rel-dir>>/base_template_eval_mpsr_pipe.jinja",
-        "badger-template-eval-mpsr-pipe":   "<<templates-rel-dir>>/badger_template_eval_mpsr_pipe.yaml",
+        "base-template-train-model-pipeline":    "<<templates-rel-dir>>/base_template_train_model_pipeline.jinja",
+        "badger-template-train-model-pipeline":  "<<templates-rel-dir>>/badger_template_train_model_pipeline.yaml",
+        "base-template-eval-model-pipeline":     "<<templates-rel-dir>>/base_template_eval_model_pipeline.jinja",
+        "badger-template-eval-model-pipeline":   "<<templates-rel-dir>>/badger_template_eval_model_pipeline.yaml",
     }
     standard_settings = map_dict_vals_to_str(standard_settings)
     return standard_settings

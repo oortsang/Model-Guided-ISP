@@ -124,7 +124,7 @@ def apply_settings_yaml(
     cleanup: bool=False,
     verbosity: int=2,
 ) -> str:
-    """This should be roughly equivalent to the task in replace_fields_in_chevrons.py
+    """This should be roughly equivalent to the task in scripts/replace_fields_in_chevrons.py
     Returns a copy of the output as a string
     """
     # if verbosity >= VLVL_IO_INFO:

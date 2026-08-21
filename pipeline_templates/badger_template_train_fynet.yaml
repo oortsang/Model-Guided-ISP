@@ -1,7 +1,7 @@
 ---
 # This is re-running the hyperparameter search because the data loading was previously not quite right
 definitions:
-  command: python train_MFISNet_Fused_new_interface.py
+  command: python train_FYNet.py
   # template: "<<rlc-repo>>/<<templates-rel-dir=mpsr_scripts>>/\
   #   base_template_train_FYNet.jinja"
   template: "<<rlc-repo>>/<<base-template-train-fynet=pipeline_templates/base_template_train_fynet.jinja>>"

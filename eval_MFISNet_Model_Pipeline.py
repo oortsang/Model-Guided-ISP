@@ -16,17 +16,19 @@ import argparse
 # import tqdm
 
 # PDE solver
-from solvers.integral_equation.HelmholtzSolverDifferentiable import (
-    setup_differentiable_solver,
-    HelmholtzSolverDifferentiable,
-    PytorchPDESolver,
+from solvers.integral_equation.helmholtz_solver_bicgstab import (
+    setup_bicgstab_solver,
+    HelmholtzSolverBicgstab,
     NP_CDTYPE, TORCH_CDTYPE, TORCH_RDTYPE,
+)
+from solvers.integral_equation.helmholtz_solver_gradients import (
+    PytorchPDESolver,
 )
 
 # Models/dataset
-from src.models.MFISNet_pde_solver_refinement_v1 import (
-    MFISNet_pde_solver_refinement_v1,
-    load_MFISNet_pde_solver_refinement_v1_from_state_dict,
+from src.models.MFISNet_Refinement_Block import (
+    MFISNet_Refinement_Block,
+    load_MFISNet_Refinement_Block_from_state_dict,
 )
 
 from src.models.MFISNet_Model_Pipeline import (

@@ -1,4 +1,4 @@
-# Train a single block of PDE Solver Refinement
+# Train a single per-frequency block of MFISNet-Refinement (MRef)
 # Expects to receive just one frequency
 
 import logging
@@ -16,15 +16,12 @@ from src.data.add_noise import add_noise_to_d
 from src.data.data_io import (
     load_dir, load_multifreq_dataset, load_scobj_dir
 )
-# from src.models.MFISNet_Fused import MFISNet_Fused
-from src.models.MFISNet_pde_solver_refinement_v1 import (
-    MFISNet_pde_solver_refinement_v1,
-    # TupleWrapper,
-    # TupleLinearData,
+from src.models.MFISNet_Refinement_Block import (
+    MFISNet_Refinement_Block,
 )
 from src.data.datasets import (
     TupleLinearData,
-    setup_dataset_tuplelinear as setup_pde_solver_refinement_dataset
+    setup_dataset_tuplelinear as setup_mpsr_block_dataset
 )
 
 from src.training_utils.train_loop import train, evaluate_losses_on_dataloader
@@ -94,8 +91,6 @@ def setup_args() -> argparse.Namespace:
     parser.add_argument("--n_cnn_channels_2d", type=int, default=10)
     parser.add_argument("--kernel_size_1d", type=int, default=13)
     parser.add_argument("--kernel_size_2d", type=int, default=13)
-    parser.add_argument("--merge_middle_freq_channels", choices=["true", "false"])
-    parser.add_argument("--polar_padding", choices=["true", "false"], default="true")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--n_epochs", type=int, default=100)
     parser.add_argument("--lr_init", type=float, default=1.0)
@@ -182,14 +177,6 @@ def main(
     3. Prepare the logging function
     4. Train NN
     """
-    # Start by processing the arguments
-    mmfc_bool = False if args.merge_middle_freq_channels.lower() == "false" else True
-    polar_padding_bool = False if args.polar_padding.lower() == "false" else True
-    logging.info(
-        f"Received: merge_middle_freq_channels={mmfc_bool} and polar_pad={polar_padding_bool}"
-    )
-    args.merge_middle_freq_channels_bool = mmfc_bool
-    args.polar_padding_bool = polar_padding_bool
     # Adjust the learning rate according to which frequency-level we are at
     lr_lvl_adjust = args.lr_decrease_factor ** (args.freq_lvl - 1)
     lr_init_eff = args.lr_init * lr_lvl_adjust
@@ -357,7 +344,7 @@ def main(
 
     # Next... run the "setup_dataset" function
     train_valid_idcs = pred_train_dd["orig_idcs"]
-    train_dset = setup_pde_solver_refinement_dataset(
+    train_dset = setup_mpsr_block_dataset(
         pred_train_q_polar,
         pred_train_d_mh,
         ref_train_d_mh[train_valid_idcs],
@@ -365,7 +352,7 @@ def main(
         ref_q_polar_orig=ref_train_q_polar_orig[train_valid_idcs],
     )
     eval_valid_idcs  = pred_eval_dd["orig_idcs"]
-    eval_dset = setup_pde_solver_refinement_dataset(
+    eval_dset = setup_mpsr_block_dataset(
         pred_eval_q_polar,
         pred_eval_d_mh,
         ref_eval_d_mh[eval_valid_idcs],
@@ -383,7 +370,7 @@ def main(
     eval_dloader = torch.utils.data.DataLoader(eval_dset, batch_size=args.batch_size)
 
     # Initialize the model
-    model = MFISNet_pde_solver_refinement_v1(
+    model = MFISNet_Refinement_Block(
         N_h=N_h,
         N_rho=N_rho,
         N_freqs=N_freqs, # compensate for the doubled inputs
@@ -393,14 +380,11 @@ def main(
         w_2d=args.kernel_size_2d,
         N_cnn_1d=args.n_cnn_1d,
         N_cnn_2d=args.n_cnn_2d,
-        merge_middle_freq_channels=args.merge_middle_freq_channels_bool,
         big_init=args.big_init,
-        polar_padding=args.polar_padding_bool,
         init_mode=args.init_mode,
         use_cnns_2d=args.use_cnns_2d,
         embedding_mode=args.embedding_mode,
         N_emb_channels_out=args.n_emb_channels_out,
-        set_c1d_per_freq=args.set_c1d_per_freq,
         use_pred_d_mh=args.use_pred_d_mh,
     )
 
@@ -498,8 +482,6 @@ def main(
                     "n_update_cnn_2d": model_0.N_update_cnn_2d,
                     "n_cnn_channels_1d": args.n_cnn_channels_1d,
                     "n_cnn_channels_2d": args.n_cnn_channels_2d,
-                    "merge_middle_freq_channels": args.merge_middle_freq_channels_bool,
-                    "polar_padding": args.polar_padding_bool,
                     "kernel_size_1d": args.kernel_size_1d,
                     "kernel_size_2d": args.kernel_size_2d,
                     "lr_init": args.lr_init,

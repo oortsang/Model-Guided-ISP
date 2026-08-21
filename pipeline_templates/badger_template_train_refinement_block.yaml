@@ -1,7 +1,7 @@
 ---
 definitions:
-  command: python train_MFISNet_pde_solver_refinement_v1.py
-  template: "<<rlc-repo>>/<<base-template-train-mpsr=pipeline_templates/base_template_train_mpsr.jinja>>"
+  command: python train_MFISNet_Refinement_Block.py
+  template: "<<rlc-repo>>/<<base-template-train-refinement-block=pipeline_templates/base_template_train_refinement_block.jinja>>"
 
   copy_to_item: true
 
@@ -67,8 +67,6 @@ arguments:
   # - !Scalar { name: n_cnn_1d, value: <<n-cnn-1d=3>>, prefix: "--n_cnn_1d" }
   # - !Scalar { name: n_cnn_2d, value: <<n-cnn-2d=3>>, prefix: "--n_cnn_2d" }
   - !Scalar { name: init_scale, value: "", prefix: "--big_init" }
-  - !Scalar { name: mmfc, value: "true", prefix: "--merge_middle_freq_channels" }
-  - !Scalar { name: polar_padding, value: "true", prefix: "--polar_padding" }
   - !Scalar { name: n_epochs, value: <<num-epochs=100>>, prefix: "--n_epochs" }
   - !Scalar { name: n_epochs_per_log, value: <<num-epochs-per-log=5>>, prefix: "--n_epochs_per_log" }
   - !Scalar { name: debug, value: "", prefix: "--debug" }

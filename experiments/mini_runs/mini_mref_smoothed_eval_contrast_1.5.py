@@ -2,6 +2,9 @@
 # submission occurs separately and involves calling run_pipeline
 # This is a variant of the pipeline specifically for evaluating
 # the MMG pipeline
+#
+# Evaluation-only (post-e2e) config for the mini_mfisnet_refinement_smoothed.py
+# run, targeting OOD contrast 1.5.
 
 import re, os, sys, time, copy
 import pickle
@@ -33,12 +36,8 @@ from src.utils.pipeline_utils import (
     # VLVL_SBATCH_CMD,
 )
 from src.utils.pipeline_blocks import (
-    TrainFYNet,
-    EvalFYNet,
-    TrainEvalMMGUBlock,
-    EvalMMGUBlock,
-    RunMMGSolver,
     MMGTaskPipeline,
+    EvalMRefPipeline,
     get_standard_mmg_settings,
     load_system_setup,
     setup_basic_pipeline_tasks,
@@ -55,36 +54,27 @@ from src.utils.replace_fields_utils import (
 
 # Commonly updated stuff
 STR_NU_LIST_VAL    = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
-WANDB_PROJECT_VAL  = "2025-09-16_mmg_Nk_10_early_runs"
+WANDB_PROJECT_VAL  = "none"
 
-# Incoming model info
-MODEL_DATE_VAL = "2025-10-02"
-INCOMING_WHOLE_RUN_NAME = "mmgu_Nk_10_(1,2,3,4,5,6,7,8,9,10)_train_original_ntr_1000_noise_0.0_epochs_300"
+# Incoming model info -- matches mini_mfisnet_refinement_smoothed.py's own
+# RUN_DATE_VAL/WHOLE_RUN_NAME_VAL (the e2e-fine-tuned model we're evaluating)
+MODEL_DATE_VAL = "2026-08-20"
+INCOMING_WHOLE_RUN_NAME_VAL = "mini_mref_smoothed"
 INC_NOISE_LEVEL = "0.0"
-NUM_TRAIN = 1000
-NUM_VAL   = 1000
-NUM_TEST  = 1000
+NUM_TRAIN = 10
+NUM_VAL   = 10
+NUM_TEST  = 10
 
-# # Incoming model info
-# MODEL_DATE_VAL = "2025-09-16"
-# INCOMING_WHOLE_RUN_NAME = "mmgu_Nk_10_(1,2,3,4,5,6,7,8,9,10)_train_original_ntr_100_noise_0.0_epochs_150"
-# INC_NOISE_LEVEL = "0.0"
-# NUM_TRAIN = 100
-# NUM_VAL   = 1000
-# NUM_TEST  = 1000
-
-
-RUN_DATE_VAL = "2025-11-03"
-WHOLE_RUN_NAME_VAL = "eval_mmgu_Nk_10_(1,2,3,4,5,6,7,8,9,10)_contrast_3.0"
+RUN_DATE_VAL = "2026-08-21"
+WHOLE_RUN_NAME_VAL = "eval_mref_post_e2e_contrast_1.5_mini_mref_smoothed"
 
 # Eval data info
-# EVAL_DATASET = os.path.join("rlc_data", "predictions", "2025-09-23_shepp_logan_single")
-EVAL_DATASET = os.path.join(load_system_setup()["file-paths"]["ood-dataset"], "2025-09-23_ood_dataset_contrast_3.0")
+EVAL_DATASET = os.path.join(load_system_setup()["file-paths"]["ood-dataset"], "2025-09-23_ood_dataset_contrast_1.5")
 EVAL_NUM_TRAIN = 0
 EVAL_NUM_VAL   = 0
-EVAL_NUM_TEST  = 1000
+EVAL_NUM_TEST  = 10
 EVAL_DSET_LIST = ["test"]
-EVAL_DSET_NUMS = list(map(str,[EVAL_NUM_TEST]))
+EVAL_DSET_NUMS = list(map(str, [EVAL_NUM_TEST]))
 NOISE_LEVEL = "0.0"
 
 
@@ -94,10 +84,10 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
     we also don't need to re-generate the scripts)
     """
     global RUN_DATE_VAL, WHOLE_RUN_NAME, STR_NU_LIST_VAL, WANDB_PROJECT_VAL
-    global MODEL_DATE_VAL, INCOMING_WHOLE_RUN_NAME, NOISE_LEVEL
+    global MODEL_DATE_VAL, INCOMING_WHOLE_RUN_NAME_VAL, NOISE_LEVEL
     global NUM_TRAIN, NUM_VAL, NUM_TEST, EVAL_DSET_LIST
     global EVAL_NUM_TRAIN, EVAL_NUM_VAL, EVAL_NUM_TEST, EVAL_DSET_NUMS
-    global INC_NOISE_LEVEL, INCOMING_WHOLE_RUN_NAME, EVAL_DATASET
+    global INC_NOISE_LEVEL, INCOMING_WHOLE_RUN_NAME_VAL, EVAL_DATASET
     ### Common settings ###
     system_setup = load_system_setup()
     rlc_repo_dir = system_setup["file-paths"]["repo-dir"]
@@ -113,11 +103,11 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
     # Settings for the pipeline I'm trying to evaluate
     incoming_pipeline_settings = {
         "inc-model-date": MODEL_DATE_VAL,
-        "inc-whole-run-name": INCOMING_WHOLE_RUN_NAME,
+        "inc-whole-run-name": INCOMING_WHOLE_RUN_NAME_VAL,
         "inc-fynet-base-name":     "train_fynet_f<<freq-idx>>_for_<<inc-whole-run-name>>",
-        "inc-mmgublock-base-name": "train_mmgu_f<<freq-idx>>_for_<<inc-whole-run-name>>",
-        "inc-train-targets":       "original",
-        "inc-eval-targets":        "original",
+        "inc-mref-base-name":      "train_mref_f<<freq-idx>>_for_<<inc-whole-run-name>>",
+        "inc-train-targets":       "smoothed",
+        "inc-eval-targets":        "smoothed",
         "inc-noise-level":         INC_NOISE_LEVEL,
         "inc-num-train":           NUM_TRAIN,
         "inc-num-val":             NUM_VAL,
@@ -148,26 +138,13 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         "scripts-task-pipeline-fp": "<<scripts-dir>>/task_pipeline.pickle",
 
         # General stuff
-        # "rlc-repo":                 rlc_repo_dir,
-        # "rlc-data":                 rlc_data_dir,
         "dataset-rel-dir":          EVAL_DATASET, # for FYNet/base
         "ref-dataset-rel-dir":      EVAL_DATASET, # for MMG/refinement-based stuff
         "ref-dataset-dir":          EVAL_DATASET, # for MMG/refinement-based stuff
         "dataset-dir":              EVAL_DATASET, # just in case
-        # "templates-rel-dir":        "pipeline_templates",
-        # "predictions-rel-dir":      f"{rlc_data_dir}/mmg_pipeline/predictions",
-        # "results-rel-dir":          f"{rlc_data_dir}/mmg_pipeline/results",
-        # "models-rel-dir":           f"{rlc_data_dir}/mmg_pipeline/models",
-        # "central-rel-dir":          f"{rlc_data_dir}/mmg_pipeline/central_run_info",
 
         # Slurm stuff
-        # "partition": "gpu",
-        # "num-cpu": 2,
-        # "num-gpu": 1,
         "exclude-node": '""',
-        # "mem": "50G",
-        # "mail-type": "NONE",
-        # "mail-user": "NONE",
         "wandb-project": WANDB_PROJECT_VAL,
 
         # Data settings
@@ -185,11 +162,14 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         "eval-num-test":  EVAL_NUM_TEST,
         "eval-dset-list": " ".join(EVAL_DSET_LIST),
         "eval-dset-nums": " ".join(EVAL_DSET_NUMS),
+        # The e2e fine-tuning stage always targets original (unsmoothed)
+        # objects, so we evaluate against original targets here too --
+        # matches train_mref_pipe_settings/eval_mref_pipe_settings in
+        # mini_mfisnet_refinement_smoothed.py
         "train-targets": "original",
         "eval-targets":  "original",
 
         # noise seed and stuff
-        "noise-level": NOISE_LEVEL,
         "use-noise-seed": "true",
         "noise-seed-base-train": 10000000,
         "noise-seed-base-val":   20000000,
@@ -227,35 +207,47 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         return out_settings
 
     ### Block-wise settings ###
-    eval_fynet_settings = {
+    dset_list = EVAL_DSET_LIST
+
+    eval_mref_pipe_settings = {
         **incoming_pipeline_settings,
-        # "model-base-name": incoming_pipeline_settings["inc-fynet-base-name"],
-        "model-base-name": "<<inc-fynet-base-name>>",
-        "model-date": "<<inc-model-date>>",
+        "freq-idx": "e", # Treat the index as e...
+        "fi":       "e",
+        "level-type":   "mrefpipe",
+        "level-base-name": "eval_e2e_mrefpipe_for_<<whole-run-name>>",
+        "block-badger-fp": "<<scripts-dir>>/f<<freq-idx>>_badger_eval_e2e_mrefpipe.yaml",
+
+        "model-date":    MODEL_DATE_VAL,
+        "eval-date":     RUN_DATE_VAL,
+
+        "train-targets": "original",
+        "eval-targets": "original",
+        "use-pred-d-mh": "false", # MFISNet-Refinement mode
+
+        # Data/logging setup
+        "e2e-dsets": " ".join(EVAL_DSET_LIST),
+        "e2e-dsets-num-samples": "<<eval-dset-nums>>",
+
+        "noise-level": "<<noise-level>>",
+        "jax-mem-alloc-mb": 0,
+        "e2e-eval-batch-size": 100,
+        "e2e-eval-seed": "1001",
+
+        # Name for the model, then I/O stuff
+        "e2e-common-name": "<<whole-run-name>>",
+        "e2e-model-name": "<<eval-date>>_<<e2e-common-name>>",
+
         "output-pred-scobj-dir": (
-            "<<predictions-rel-dir>>/"
-            "<<run-date>>_eval_<<eval-targets>>_train_<<train-targets>>_fynet_f<<freq-idx>>_for_<<whole-run-name>>"
+            "<<predictions-rel-dir>>/<<run-date>>_"
+            "eval_<<eval-targets>>_train_<<train-targets>>_"
+            "e2e_for_<<whole-run-name>>"
+        ),
+        "output-dset-summary-fp": "<<central-run-dir>>/e2e_summary_${dset}.yaml",
+        "output-central-summary-fp": "<<central-run-dir>>/e2e_summary.yaml",
+        "hyperparam-summary-fp": (
+            "<<inc-central-run-dir>>/e2e_summary.yaml"
         ),
 
-        "central-model-dir": "<<inc-central-run-dir>>/models",
-        "central-results-fp": "<<central-run-dir>>/summary.yaml", # hope this works...
-        "block-badger-fp": "<<scripts-dir>>/f<<freq-idx>>_badger_eval_fynet.yaml",
-
-        # Things copied from the mpsr pipeline
-        "level-type": "fynet",
-        "level-base-name": "eval_fynet_f<<freq-idx>>_for_<<whole-run-name>>",
-        "delete-unused-models": "false",
-        "eval-batch-size": 100,
-        # "train_targets": "original",
-        # "eval_targets": "original",
-        "train_targets": "<<inc-train-targets>>",
-        "eval_targets": "original",
-        "output-common-name-format": "{run_date}_eval_{et}_train_{tt}_fynet_f<<freq-idx>>_for_<<whole-run-name>>",
-        "results-file-pattern-format": (
-            "{model_date}_<<model-base-name>>"
-            "_targets_{tt}_ntrain_<<inc-num-train>>_noise_<<inc-noise-level>>_nus_<<nu-sf>>"
-            "_arch_*_opt_*.txt"
-        ),
         "num-train": "<<eval-num-train>>",
         "num-val":   "<<eval-num-val>>",
         "num-test":  "<<eval-num-test>>",
@@ -263,81 +255,30 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         # Running settings
         "samples-per-chunk": shard_size,
         "eval-seed": "1001",
-        "mem": "50G",
+        "mem": "80G",
         "time-limit": "1:00:00",
-        "logs-rel-dir": "logs/mmg_pipeline/eval_fynet",
-        "jobs-rel-dir": "jobs/mmg_pipeline/eval_fynet",
-        # I don't have direct access here to whether the particular instance
-        # was trained on smoothed or original targets
-        # This hack is meant to use bash to figure out the conditional since
-        # I don't think that badger handles that...
-        "field-name": "$(if [ {tt} = smoothed ]; then echo val_rel_l2; else echo val_final_rel_l2; fi)",
+        "logs-rel-dir": "logs/mmg_pipeline/eval_e2e_mref",
+        "jobs-rel-dir": "jobs/mmg_pipeline/eval_e2e_mref",
+
+        # Selection stuff
+        # Most of these should be ignored due to select-hyperparameters being set to false...
+        "select-hyperparameters": "false",
+        "centralize-models": "false",
         "selection-mode": "min",
+        "selection-field": (
+            "'$(if [ {tt} = smoothed ]; then echo eval_rel_l2; "
+            "else echo eval_final_rel_l2; fi)'"
+        ),
+        "field-name": "$(if [ {tt} = smoothed ]; then echo val_rel_l2; else echo val_final_rel_l2; fi)",
         "verbosity-level": "1",
+
+        # HPS settings that I probably won't use
+        "use-pde-args": "true",
+        "pde-solver-type": "hps",
+        "hps-l": "3",
+        "hps-p": "16",
     }
-    eval_fynet_settings = process_block_settings(eval_fynet_settings)
-
-    run_mmg_solver_settings = {
-        "hps-l": 3,
-        "hps-p": 16,
-        "hps-comp-domain-factor": 1.1,
-        "first-chunk-start": 0,
-        "samples-per-chunk": shard_size,
-        "write-every-n": 50,
-
-        # badger/io
-        "output-name-format": "{output_dir}/{dset}_gammas_nu_{nu_sf}/gammas_{input_label}.h5",
-        "output-mmg-rel-dir": "<<predictions-rel-dir>>/<<run-date>>_hps_mmg_f<<freq-idx>>_for_<<whole-run-name>>",
-        "block-badger-fp": "<<scripts-dir>>/f<<freq-idx>>_badger_mmg_solver_<<dset>>.yaml",
-
-        # slurm stuff
-        "logs-rel-dir": "logs/mmg_pipeline/mmg_solver",
-        "jobs-rel-dir": "jobs/mmg_pipeline/mmg_solver",
-        "log-name-format": "<<run-date>>_mmg_solver_f<<freq-idx>>_for_<<whole-run-name>>_nu_{nu_sf}_dset_{dset}_chunk_{input_label}",
-        "job-name-format": "mmg_solver_nu_{nu_sf}_dset_{dset}_chunk_{input_label};<<run-date>>_",
-        "noise-level": "0.0",
-    }
-    run_mmg_solver_settings = process_block_settings(run_mmg_solver_settings)
-
-    # dset_list =  ["train", "val", "test"]
-    dset_list = EVAL_DSET_LIST
-    eval_mmgublock_settings = {
-        **incoming_pipeline_settings,
-        "model-date": "<<inc-model-date>>",
-        "model-base-name": "<<inc-mmgublock-base-name>>",
-        "cleanup": False,
-        "seed": 29384,
-        "log-batch-size": 50,
-
-        # Badger/script file location
-        "block-badger-fp": "<<scripts-dir>>/f<<freq-idx>>_badger_eval_mmgublock.yaml",
-        "logs-rel-dir": "logs/mmg_pipeline/eval_mmgu",
-        "jobs-rel-dir": "jobs/mmg_pipeline/eval_mmgu",
-        "log-name-format": "{model_name}",
-        "job-name-format": "{model_name}",
-
-        # Set up things that depend on the incoming run...
-        "central-model-fp":       "<<inc-central-run-dir>>/models/model_params_<<freq-idx>>.pickle",
-        "in-central-summary-fp":  "<<inc-central-run-dir>>/summary.yaml",
-        "out-central-summary-fp": "<<central-run-dir>>/summary.yaml",
-
-        ### Model names ###
-        "output-common-name-format": "<<run-date>>_eval_{et}_train_{tt}_mmgublock_f<<freq-idx>>_for_<<whole-run-name>>",
-
-        ### I/O ###
-        "output-pred-shard-size": shard_size,
-        "output-pred-save": "true",
-        "output-pred-format": (
-            "<<predictions-rel-dir>>/"
-            "<<run-date>>_eval_{et}_train_{tt}_mmgu_f<<freq-idx>>_for_<<whole-run-name>>"
-        ),
-        # Only set block-eval-targets during runtime
-        "output-pred-format-internal": (
-            "<<predictions-rel-dir>>/"
-            "<<run-date>>_eval_<<eval-targets>>_train_<<train-targets>>_mmgu_f<<freq-idx>>_for_<<whole-run-name>>"
-        ),
-    }
-    eval_mmgublock_settings = process_block_settings(eval_mmgublock_settings)
+    eval_mref_pipe_settings = process_block_settings(eval_mref_pipe_settings)
 
 
     ### Print settings ###
@@ -351,26 +292,21 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         print(f"Received the following settings...")
         print(common_settings_str)
         settings_list = [
-            (eval_fynet_settings, "Eval FYNet settings"),
-            (eval_mmgublock_settings, "Eval MMGUBlock settings"),
-            (run_mmg_solver_settings, f"Run MMGSolver settings (dsets: {dset_list})"),
+            (eval_mref_pipe_settings, "Eval MRef Model-Pipeline settings"),
         ]
         for settings, name in settings_list:
             print(pretty_dict_to_str(settings, name, indent_width=indent))
 
 
     ### Set up the blocks and pipeline ###
-    eval_fynet      = EvalFYNet("eval-fynet", eval_fynet_settings)
-    run_mmg_solver  = RunMMGSolver("run-mmg-solver", dset_list, run_mmg_solver_settings)
-    # train_mmgublock = TrainEvalMMGUBlock("train-mmgublock", train_mmgublock_settings)
-    eval_mmgublock  = EvalMMGUBlock("eval-mmgublock", eval_mmgublock_settings)
+    eval_mref_pipe = EvalMRefPipeline("eval-mref-pipe", eval_mref_pipe_settings)
+    e2e_block = SequentialTasks("fe", [eval_mref_pipe])
+    e2e_block.freq_idx = "e"
 
-    init_block = FrequencyBlock("f1", [eval_fynet])
-    iter_block = FrequencyBlock("fi", [run_mmg_solver, eval_mmgublock])
+    pipeline_tasks = [
+        copy_and_name("fe", e2e_block),
+    ]
 
-    pipeline_tasks = setup_basic_pipeline_tasks(
-        init_block, iter_block, Nk-1,
-    )
     main_pipeline = MMGTaskPipeline(
         "MMG Pipeline",
         pipeline_tasks,
@@ -386,12 +322,8 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
     ### Set up context and generate scripts ###
     context = {
         "data-input-nus": data_input_nus,
-        "freq-idx": 1,
+        "freq-idx": "e",
         "nu-sf": str_nu_list[0],
-        # Now we use FYNet so these *shouldn't* be needed...
-        # "last-output-pred-scobj-dir": "ERROR",
-        # "last-output-pred-mmg-dir": "ERROR",
-        # "last-task": "train-fynet",
     }
     context_init = {**context}
 
@@ -405,9 +337,7 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         "context-init": context_init,
         "context-after": context_after, # in case we need it??
         "common-settings": common_settings,
-        "eval-fynet-settings":     eval_fynet_settings,
-        "run-mmg-solver-settings": run_mmg_solver_settings,
-        "eval-mmgublock-settings": eval_mmgublock_settings,
+        "eval-mref-pipe-settings": eval_mref_pipe_settings,
     }
 
     return save_object
@@ -431,10 +361,8 @@ def run_pipeline(command_str: str, use_pickled_pipeline: bool=False, verbosity: 
     in case there were any manual changes in the meantime
     """
     # does not currently allow us to control the sub-sections...
-    # main_pipeline.submit_scripts(sleep_time=0.5, verbosity=verbosity)
     save_object = setup_pipeline(
         verbosity=max(0,verbosity-2),
-        # verbosity=0,
         generate_scripts=(not use_pickled_pipeline),
         **kwargs
     )

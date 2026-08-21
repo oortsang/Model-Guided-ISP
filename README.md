@@ -37,15 +37,15 @@ This repository contains several neural network models, as well as several other
 
 - Neural network components:
   - CNN part of the HPS-CNN refinement block, in `src/models/MMGUBlock.py` (measurement misfit gradient update)
-  - MFISNet-Refinement baseline in `src/models/MFISNet_Refinement.py`
-  - `MFISNet_Model_Pipeline.py`
+  - MFISNet-Refinement baseline, trained/evaluated block-by-block via `src/models/MFISNet_Refinement_Block.py`
+  - `MFISNet_Model_Pipeline.py`, which glues together FYNet and MFISNet-Refinement blocks
 - Two differentiable PDE solvers:
   - an integral-equation solver based on the Lippmann-Schwinger equation using a PyTorch implementation of BiCGSTAB, located in `solvers/integral_equation`
   - an HPS-based solver using `jaxhps`, located in `solvers/hps/wave_scattering`
 - Recursive linearization algorithm, using the HPS solver
 - Utilities to manage the training/evaluation pipeline on SLURM clusters, which helps to parallelize the PDE solves during training
 
-Additionally, we provide an notebook in `illustrative_small_scale_hpscnn_training.ipynb` for the sake of illustrating the end-to-end training process, which sets up and trains the `HPS-CNN` architecture for a small dataset of N=100 samples. Please note that this code is not optimized for speed or accuracy, so for our production implementation please refer to the "Training" and "Running pipelines" sections.
+Additionally, we provide a notebook in `illustrative_small_scale_hpscnn_training.ipynb` for the sake of illustrating the end-to-end training process, which sets up and trains the `HPS-CNN` architecture for a small dataset of N=100 samples. Please note that this code is not optimized for speed or accuracy, so for our production implementation please refer to the "Training" and "Running pipelines" sections.
 
 ## Environment setup
 
@@ -75,7 +75,7 @@ The initial block is taken as an FYNet architecture, while subsequent refinement
 Since we process a single frequency at a time, the process can be separated into alternating training phases and HPS-application phases.
 This means we only need to call the HPS solver `N_samples*(N_k - 1)` times instead of `N_epochs*N_samples*(N_k-1)`, as an end-to-end strategy may require. Thus, the additional training cost incurred by including a PDE solver is relatively modest under this strategy.
 
-See `train_MFISNet_Fused_new_interface.py`, `generate_meas_misfit_files.py`, and `train_MMGUBlock.py` for the block-wise training (and PDE solver application) scripts.
+See `train_FYNet.py`, `generate_meas_misfit_files.py`, and `train_MMGUBlock.py` for the block-wise training (and PDE solver application) scripts.
 
 ## Running pipelines
 Additionally, our training (and evaluation) pipeline takes advantage of the embarassingly parallel nature of the HPS-application phases by splitting up this task among a number of Slurm nodes; this is helpful to reduce the wall-clock time, especially for larger training sets (e.g., we go up to 10,000 training samples, each with 10 frequencies).
@@ -96,6 +96,9 @@ In case you need to inspect individual files, the pipeline generation command cr
 
 ## Recursive linearization baseline
 The RecLin baseline can be invoked using [Badger](https://github.com/oortsang/badger-modified) as `python -m badger experiments/2025-10-31_config_rl_mod_{noise,ood}.yaml`. Note that you may need to set up the `logs/rl/` directory ahead of time for the Slurm submission to work; we offer a `make_log_dirs.sh` script to automatically create this directory, along with other log directories that may be required for the other experiments.
+
+## Wide-band Equivariant Network baseline
+For this work, we also compared against the Wide-band Equivarianet Network (Uncompressed) ([Zhang et al., 2024](https://doi.org/10.1016/j.cam.2024.116050)). We used the code provided by the authors, [in this repo](https://github.com/borongzhang/ISP_baseline), which we adapted for use with our dataset (layout, number of frequencies, image resolution) in [our fork](https://github.com/oortsang/ISP_baseline_fork).
 
 ## Dataset
 The dataset will be made available [via Zenodo](https://doi.org/10.5281/zenodo.21939523) (note: link may not be live yet). There are up to 10,000 scattering potentials in the training set and 1,000 in each of the validation and test sets. The measurements correspond to $\nu=k/2\pi=1,2,3,\dots,10$ (i.e., the wavelength goes from 1 per domain sidelength to 10 per domain sidelength).
@@ -161,7 +164,7 @@ Note that this is a different solver from what we use in HPS-CNN, so we avoid an
 The scripts used to generate the dataset are located in `data_generation_main` (for the primary dataset) and `data_generation_ood` (for scattering potentials with out-of-distribution contrasts).
 
 ## Notes on naming
-Within the code, we adopt somewhat different naming from the paper (some of these evolved over time). We refer to the "negative gradient of error in measurement space" as the "measurement misfit gradient," or abbreviated as "MMG." Similarly, the learned component of the refinement blocks is named "MMGUBlock" for "MMG Update Block." Additionally, we invoke FYNet blocks using the MFISNet-Fused interface from our previous work, as it is strictly more general.
+Within the code, we adopt somewhat different naming from the paper (some of these evolved over time). We refer to the "negative gradient of error in measurement space" as the "measurement misfit gradient," or abbreviated as "MMG." Similarly, the learned component of the refinement blocks is named "MMGUBlock" for "MMG Update Block."
 
 ## Citation
 If this code is helpful to your research, please cite our pre-print (and stay tuned for the forthcoming published version):

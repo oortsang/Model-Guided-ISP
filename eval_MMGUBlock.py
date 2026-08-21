@@ -275,7 +275,6 @@ def main(
     model_loaded = load_MMGUBlock_from_state_dict(
         model_state_dict,
         summary_results_dd,
-        hss=None,
     )
     logging.info(f"Loaded the model successfully!")
 

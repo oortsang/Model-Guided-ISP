@@ -1,4 +1,4 @@
-# Load and evaluate the MFISNet_pde_solver_refinement_v1 on the requested dataset
+# Load and evaluate a MFISNet_Refinement_Block on the requested dataset
 # Also saves the predictions to disk
 
 import logging
@@ -13,12 +13,12 @@ from src.data.data_io import (
     save_dict_to_hdf5,
 )
 
-from src.models.MFISNet_pde_solver_refinement_v1 import (
-    MFISNet_pde_solver_refinement_v1,
-    load_MFISNet_pde_solver_refinement_v1_from_state_dict,
+from src.models.MFISNet_Refinement_Block import (
+    MFISNet_Refinement_Block,
+    load_MFISNet_Refinement_Block_from_state_dict,
     TupleLinearData,
 )
-from train_MFISNet_pde_solver_refinement_v1 import setup_pde_solver_refinement_dataset
+from train_MFISNet_Refinement_Block import setup_mpsr_block_dataset
 
 from src.data.data_transformations import (
     prep_conv_interp_2d,
@@ -214,7 +214,6 @@ def setup_args() -> argparse.Namespace:
         a.use_smoothed_targets = False
     return a
 
-n
 def main(args: argparse.Namespace) -> None:
     """
     1. Select the model from the best epoch of the given run
@@ -253,7 +252,6 @@ def main(args: argparse.Namespace) -> None:
             args.training_results_fp, "epoch", selection_mode="max"
         )
     best_epoch = best_epoch_dd["epoch"]
-    hps_polar_padding = best_epoch_dd["polar_padding"]
     logging.info(f"Best epoch: {best_epoch}")
 
     if args.manual_model_fp is None:
@@ -357,7 +355,7 @@ def main(args: argparse.Namespace) -> None:
         pred_eval_dd["orig_idcs"],
         ref_eval_dd["orig_idcs"],
     )
-    eval_dset = setup_pde_solver_refinement_dataset(
+    eval_dset = setup_mpsr_block_dataset(
         pred_eval_q_polar,
         pred_eval_d_mh,
         ref_eval_d_mh[eval_valid_idcs],
@@ -372,12 +370,11 @@ def main(args: argparse.Namespace) -> None:
 
     ##### Load model from disk #####
     model_state_dict = torch.load(model_fp, map_location=device)
-    model = load_MFISNet_pde_solver_refinement_v1_from_state_dict(
+    model = load_MFISNet_Refinement_Block_from_state_dict(
         model_state_dict,
         N_freqs,
         # metadata_dd=pred_eval_metadata_dd,
         epoch_results_dd=best_epoch_dd,
-        # polar_padding=hps_polar_padding,
         N_h=N_h,
         use_pred_d_mh=args.use_pred_d_mh,
     )

@@ -1,19 +1,18 @@
-# MFISNet-PDE-Solver-Refinement-v1
-# Packages MFISNet_Fused and MFISNet-Refinement but with a little extra wrapping
-# to handle the new inputs in the form of [Fk[q], Fk[q]-dk, dk]
-# Also contains a new dataset type, TupleLinearData, for use with the new setup
+# MFISNet-Refinement-Block
+# Implements a single per-frequency refinement block for MFISNet-Refinement
+# (MRef): given the previous frequency level's estimate and the current
+# frequency's data (in the form of [Fk[q], Fk[q]-dk, dk]), produces an
+# updated estimate.
+# Also contains a dataset type, TupleLinearData, for use with this setup.
 
 import torch
 import logging
 from typing import List
-import re
 
-from src.models.MFISNet_Fused import MFISNet_Fused, load_MFISNet_Fused_from_state_dict
-from src.models.MFISNet_Refinement import KLayer2DCNN
-from src.models.FYNet import FYNetInverse, FYNetForward
+from src.models.MFISNet_Fused import MFISNet_Fused
+from src.models.FYNet import FYNetForward
 
 from src.utils.conv_ops import (
-    conv_in_fourier_space,
     apply_conv_with_polar_padding,
 )
 
@@ -48,10 +47,86 @@ class TupleLinearData(torch.utils.data.Dataset):
         # return TupleWrapper(self.X1[idx], self.X2[idx]), self.y[idx], self.y[idx]
         return [self.X1[idx], self.X2[idx]], self.y[idx], self.y_orig[idx]
 
-class MFISNet_pde_solver_refinement_v1(torch.nn.Module):
-    """MFISNet variant using the output of a PDE Solver to perform
-    progressive refinement steps. Uses an FYNet variant (MFISNet-Fused)
-    along with a 2D CNN to perform the update step (plus a skip connection).
+class KLayer2DCNN(torch.nn.Module):
+    def __init__(
+        self,
+        n_layers: int,
+        n_in_channels: int,
+        n_out_channels: int,
+        n_feature_channels: int,
+        kernel_size: int,
+        skip_connection: bool = False,
+        init_mode: str = None,
+        angular_axis_last: bool = False,
+    ) -> None:
+        super().__init__()
+        self.n_layers = n_layers
+        self.n_in_channels = n_in_channels
+        self.n_out_channels = n_out_channels
+        self.n_feature_channels = n_feature_channels
+        self.kernel_size = kernel_size
+        self.skip_connection = skip_connection
+
+        init_mode = init_mode.lower() if init_mode is not None else "original"
+        self.init_mode = init_mode
+
+        padding_2d = int(kernel_size / 2 - 1) + 1
+        self.cnn_layers = torch.nn.ParameterList()
+
+        channel_dims = [
+            n_in_channels, # Input (=1)
+            *((n_layers-1)*[n_feature_channels]), # Interior
+            n_out_channels, # Final layer (=1)
+        ]
+        logging.info(f"During the k-layer 2D CNN stage, the numbers of channels are {channel_dims}")
+        self.cnn_layers = torch.nn.ParameterList([])
+        for li in range(n_layers):
+            channel_dim_in  = channel_dims[li]
+            channel_dim_out = channel_dims[li+1]
+
+            new_layer = torch.nn.Conv2d(
+                in_channels=channel_dim_in,
+                out_channels=channel_dim_out,
+                kernel_size=self.kernel_size,
+                padding=padding_2d,
+                padding_mode="zeros"
+            )
+            if init_mode == "he-normal":
+                torch.nn.init.kaiming_normal_(new_layer.weight, nonlinearity="relu")
+            self.cnn_layers.append(new_layer)
+
+        self.relu = torch.nn.ReLU()
+        self.angular_axis_last = angular_axis_last
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Assume x has shape (batch, self.n_in_channels, X, Y)
+        Output will have shape (batch, self.n_out_channels, X, Y)
+
+        If skip_connection is specified, then the slice (:, :-1, :, :)
+        will be added to the output
+        """
+        if self.skip_connection:
+            add_slice = x[:, -1].unsqueeze(1)
+
+        for i, layer_i in enumerate(self.cnn_layers):
+            x = apply_conv_with_polar_padding(
+                layer_i,
+                x,
+                angular_axis_last=self.angular_axis_last
+            )
+            if i+1 < self.n_layers:
+                x = self.relu(x)
+        out = x
+
+        if self.skip_connection:
+            out = out + add_slice
+
+        return out
+
+class MFISNet_Refinement_Block(torch.nn.Module):
+    """A single per-frequency refinement block of MFISNet-Refinement (MRef).
+    Uses an FYNet variant (MFISNet-Fused) along with a 2D CNN to perform the
+    update step (plus a skip connection).
     """
     def __init__(
         self,
@@ -64,17 +139,14 @@ class MFISNet_pde_solver_refinement_v1(torch.nn.Module):
         w_2d: int,
         N_cnn_1d: int,
         N_cnn_2d: int,
-        merge_middle_freq_channels: bool,
         big_init: bool=True,
-        polar_padding: bool = False,
         init_mode: str = None,
         use_cnns_2d: str = None,
         embedding_mode: str = None,
         N_emb_channels_out: int = 0,
-        set_c1d_per_freq: bool=True,
         use_pred_d_mh: bool=True,
     ) -> None:
-        """Initialize the MFISNet_pde_solver_refinement_v1 object
+        """Initialize the MFISNet_Refinement_Block object
         The setup is as follows:
         1. Optional embedding block that maps information from q-hat to the FYNet component
         2. FYNet block that takes in [Fk[q], Fk[q]-dk, dk], as well as the embedded data if used
@@ -121,7 +193,6 @@ class MFISNet_pde_solver_refinement_v1(torch.nn.Module):
                     w_1d,
                     N_cnn_1d,
                     N_channels_out=N_emb_channels_out,
-                    polar_padding=polar_padding,
                     init_mode=init_mode,
                 )
             else:
@@ -143,16 +214,12 @@ class MFISNet_pde_solver_refinement_v1(torch.nn.Module):
             w_2d,
             N_cnn_1d,
             self.N_fynet_cnn_2d,
-            merge_middle_freq_channels,
             big_init,
-            polar_padding,
             init_mode=init_mode,
-            set_c1d_per_freq=set_c1d_per_freq,
         )
         logging.info(f"The FYNet block (as MFISNet-Fused) has {self.fynet_block.N_cnn_2d} 2D CNN layers")
 
-        # Try adding a KLayer2DCNN
-        # Note - always uses polar padding
+        # Note: always uses polar padding
         self.update_block = KLayer2DCNN(
             n_layers=self.N_update_cnn_2d,
             n_in_channels=2,
@@ -208,7 +275,7 @@ class MFISNet_pde_solver_refinement_v1(torch.nn.Module):
         w_2d = self.fynet_block.w_2d
         N_cnn_1d = self.fynet_block.N_cnn_1d
         s = (
-            f"PDE Solver Refinement model with {N_cnn_1d} "
+            f"MFISNet-Refinement-Block model with {N_cnn_1d} "
             f"1D CNN layers ({c_1d} channels, {w_1d} modes), "
             f"{self.N_fynet_cnn_2d} 2D CNN layers "
             f"({c_2d} channels {c_2d} with {w_2d}x{w_2d} kernels). "
@@ -218,15 +285,15 @@ class MFISNet_pde_solver_refinement_v1(torch.nn.Module):
         )
         return s
 
-def load_MFISNet_pde_solver_refinement_v1_from_state_dict(
+def load_MFISNet_Refinement_Block_from_state_dict(
     state_dict: dict,
     N_freqs: int,
     epoch_results_dd: dict,
     N_h: int,
     use_pred_d_mh: bool = True,
-) -> MFISNet_pde_solver_refinement_v1:
-    """Sets up a MFISNet_pde_solver_refinement_v1 model from the given state dictionary
-    and number of frequencies; Also currently seems to require the polar padding
+) -> MFISNet_Refinement_Block:
+    """Sets up a MFISNet_Refinement_Block model from the given state dictionary
+    and number of frequencies
 
     Args:
         state_dict (dict): state dictionary holding the model weights
@@ -237,18 +304,12 @@ def load_MFISNet_pde_solver_refinement_v1_from_state_dict(
         use_pred_d_mh (bool): whether the model will take pred_d_mh as one of the inputs
 
     Returns:
-        new_mfisnet_psr_v1_model (MFISNet_pde_solver_refinement_v1): the model loaded with the weights
+        new_mfisnet_refinement_block_model (MFISNet_Refinement_Block): the model loaded with the weights
     """
-    # Compensate for the inclusion of multiple inputs per frequency
-    # global NUM_D_MH_CHANNELS
-
     logging.info(f"epoch_results_dd: {epoch_results_dd.keys()}")
     logging.info(f"state_dict: {state_dict.keys()}")
 
-    # First, compute hyperparameters from the state dictionary
-    layer_dims = {key: tuple(val.shape) for (key, val) in state_dict.items()}
-    parameter_keys = list(state_dict.keys())
-
+    # First, compute hyperparameters from the state dictionary / results dict
     N_rho = epoch_results_dd["n_rho_vals"]
     c_1d = epoch_results_dd["n_cnn_channels_1d"]
     c_2d = epoch_results_dd["n_cnn_channels_2d"]
@@ -264,12 +325,8 @@ def load_MFISNet_pde_solver_refinement_v1_from_state_dict(
     else:
         embedding_mode = "none"
         N_emb_channels_out = 0
-    mmfc = epoch_results_dd["merge_middle_freq_channels"]
-    polar_padding = epoch_results_dd["polar_padding"]
-    set_c1d_per_freq = epoch_results_dd["set_c1d_per_freq"] \
-        if "set_c1d_per_freq" in epoch_results_dd.keys() else False
 
-    logging.info(f"Loading MFISNet_pde_solver_refinement_v1 with the following settings...")
+    logging.info(f"Loading MFISNet_Refinement_Block with the following settings...")
     logging.info(f"N_h={N_h}")
     logging.info(f"N_rho={N_rho}")
     logging.info(f"N_freqs={N_freqs}")
@@ -280,11 +337,10 @@ def load_MFISNet_pde_solver_refinement_v1_from_state_dict(
     logging.info(f"N_cnn_1d={N_cnn_1d}")
     logging.info(f"N_cnn_2d={N_cnn_2d}")
     logging.info(f"N_emb_channels_out={N_emb_channels_out}")
-    logging.info(f"set_c1d_per_freq={set_c1d_per_freq}")
     logging.info(f"use_pred_d_mh={use_pred_d_mh}")
 
     # Next, initialize a model
-    new_mfisnet_psr_v1_model = MFISNet_pde_solver_refinement_v1(
+    new_mfisnet_refinement_block_model = MFISNet_Refinement_Block(
         N_h=N_h,
         N_rho=N_rho,
         N_freqs=N_freqs,
@@ -294,16 +350,13 @@ def load_MFISNet_pde_solver_refinement_v1_from_state_dict(
         w_2d=w_2d,
         N_cnn_1d=N_cnn_1d,
         N_cnn_2d=N_cnn_2d,
-        merge_middle_freq_channels=mmfc,
         big_init=True, # just use this as a default value but it doesn't really matter
-        polar_padding=polar_padding,
         use_cnns_2d=use_cnns_2d,
         embedding_mode=embedding_mode,
         N_emb_channels_out=N_emb_channels_out,
-        set_c1d_per_freq=set_c1d_per_freq,
         use_pred_d_mh=use_pred_d_mh,
     )
 
     # Load in the values
-    new_mfisnet_psr_v1_model.load_state_dict(state_dict=state_dict)
-    return new_mfisnet_psr_v1_model
+    new_mfisnet_refinement_block_model.load_state_dict(state_dict=state_dict)
+    return new_mfisnet_refinement_block_model

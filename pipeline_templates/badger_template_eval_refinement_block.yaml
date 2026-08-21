@@ -1,7 +1,7 @@
 ---
 definitions:
-  command: python select_hyperparameter_from_runs.py
-  template: "<<rlc-repo>>/<<base-template-eval-mpsr=pipeline_templates/base_template_eval_mmgublock.jinja>>"
+  command: python scripts/select_hyperparameter_from_runs.py
+  template: "<<rlc-repo>>/<<base-template-eval-refinement-block=pipeline_templates/base_template_eval_refinement_block.jinja>>"
 
   copy_to_item: true
 
@@ -62,7 +62,7 @@ arguments:
   - !Scalar { name: models_dir_base, value: *MODELS_DIR_BASE }
 
   # Extras from the config file
-  - !Scalar { name: fetch_result_command, value: "python fetch_result_entry.py" }
+  - !Scalar { name: fetch_result_command, value: "python scripts/fetch_result_entry.py" }
   - !Scalar { name: central_results_fp, value: "<<central-results-fp>>" }
   - !Scalar { name: central_model_dir, value: "<<central-model-dir>>" }
   - !Scalar { name: central_model_format, value: "<<central-model-format>>" }

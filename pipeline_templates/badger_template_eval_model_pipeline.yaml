@@ -1,7 +1,7 @@
 ---
 definitions:
   command: python eval_MFISNet_Model_Pipeline.py
-  template: "<<rlc-repo>>/<<base-template-eval-mpsr-pipe=base_template_eval_mpsr_pipe.jinja>>"
+  template: "<<rlc-repo>>/<<base-template-eval-model-pipeline=base_template_eval_model_pipeline.jinja>>"
 
   copy_to_item: true
 

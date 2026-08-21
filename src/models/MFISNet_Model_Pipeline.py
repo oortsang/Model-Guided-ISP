@@ -10,11 +10,13 @@ import logging
 from typing import List, Dict, Callable
 import time
 
-from solvers.integral_equation.HelmholtzSolverDifferentiable import (
-    setup_differentiable_solver,
-    HelmholtzSolverDifferentiable,
-    PytorchPDESolver,
+from solvers.integral_equation.helmholtz_solver_bicgstab import (
+    setup_bicgstab_solver,
+    HelmholtzSolverBicgstab,
     NP_CDTYPE, TORCH_CDTYPE, TORCH_RDTYPE
+)
+from solvers.integral_equation.helmholtz_solver_gradients import (
+    PytorchPDESolver,
 )
 
 from src.data.data_transformations import (
@@ -30,13 +32,13 @@ from src.data.data_transformations import (
 )
 # from src.training_utils.make_predictions import prepare_polar_to_cart
 
-from src.models.MFISNet_pde_solver_refinement_v1 import (
-    MFISNet_pde_solver_refinement_v1,
-    load_MFISNet_pde_solver_refinement_v1_from_state_dict,
+from src.models.MFISNet_Refinement_Block import (
+    MFISNet_Refinement_Block,
+    load_MFISNet_Refinement_Block_from_state_dict,
 )
-from src.models.MFISNet_Fused import (
-    MFISNet_Fused,
-    load_MFISNet_Fused_from_state_dict,
+from src.models.FYNet import (
+    FYNetInverse,
+    load_FYNetInverse_from_state_dict,
 )
 
 from src.utils.vram_info import get_memory_info, free_vram
@@ -54,7 +56,7 @@ from solvers.hps.wave_scattering import (
 
 class MFISNet_Model_Pipeline(torch.nn.Module):
     """A class that allows for the combination of multiple
-    MFISNet-Fused or MFISNet-PDE-Solver-Refinement objects
+    FYNet or MFISNet-Refinement-Block objects
     """
     def __init__(
         self,
@@ -77,7 +79,7 @@ class MFISNet_Model_Pipeline(torch.nn.Module):
         Parameters:
             blocks (list of pytorch models): a list of neural network blocks,
                 intended to be one per frequency used
-            solvers (list of HelmholtzSolverDifferentiable objects):
+            solvers (list of HelmholtzSolverBicgstab objects):
                 Differentiable PDE solvers for each frequency
                 Could optionally set this up inside the function in the future?
                 ***Note this is one element shorter than the solvers list, since the PDE solver is
@@ -85,7 +87,7 @@ class MFISNet_Model_Pipeline(torch.nn.Module):
             freq_list (list of floats): the list of angular frequencies k of the expected data
             pde_solver_config (dictionary): configuration dictionary for the PDE solvers
                 For now, just share the same configuration at every frequency.
-                Refer to the HelmholtzSolverDifferentiable code for the relevant keys.
+                Refer to the HelmholtzSolverBicgstab code for the relevant keys.
             block_types (list of strings): optionally indicate what each type of block is
                 for later display/debugging convenience...
             N_x, N_rho, N_theta, N_h (all ints):
@@ -404,14 +406,23 @@ def load_MFISNet_Model_Pipeline_from_state_dict(
 
         # Next, load the block according to type as block_fi
         if block_type == "fynet":
-            # Load FYNet / MFISNet-Fused
-            block_fi = load_MFISNet_Fused_from_state_dict(
+            # Load FYNet
+            block_fi = load_FYNetInverse_from_state_dict(
+                state_dict,
+            )
+        elif block_type == "mref" or block_type == "mfisnet-refinement":
+            # Load MFISNet-Refinement
+            block_fi = load_MFISNet_Refinement_Block_from_state_dict(
                 state_dict,
                 1, # N_freqs -- always using it as 1 in this case
-                polar_padding=True, # Also, just stick to yes for consistency
+                epoch_results_dd=shd_fi,
+                N_h=shd_fi["n_h_vals"],
+                use_pred_d_mh=False,
             )
         elif block_type == "mpsr" or block_type == "psr" \
              or block_type == "pde-solver-refinement":
+            # Note: this is vestigial code from a former
+            # MFISNet-PDE-Solver-Refinement idea
             # Prepare the solver
             use_solver = True
             # Set up any PDE solvers, if necessary
@@ -435,29 +446,20 @@ def load_MFISNet_Model_Pipeline_from_state_dict(
                 )
                 logging.info(f"Finished setting up the HPS solver")
             else:
-                solver_obj = setup_differentiable_solver(
+                solver_obj = setup_bicgstab_solver(
                     N_x, spatial_domain_max, nu_val, receiver_radius, device=device,
                     prepare_half_grid=True,
                 )
                 logging.info(f"Finished setting up the differentiable LS solver")
             solvers.append(solver_obj)
 
-            # Load PDE-Solver-Refinement
-            block_fi = load_MFISNet_pde_solver_refinement_v1_from_state_dict(
+            # Load PDE-Solver-Refinement (uses the same block class as MFISNet-Refinement)
+            block_fi = load_MFISNet_Refinement_Block_from_state_dict(
                 state_dict,
                 1, # N_freqs -- always using it as 1 in this case
                 epoch_results_dd=shd_fi,
                 N_h=shd_fi["n_h_vals"],
                 use_pred_d_mh=True,
-            )
-        elif block_type == "mref" or block_type == "mfisnet-refinement":
-            # Load MFISNet-Refinement (as implemented by pde_solver_refinement)
-            block_fi = load_MFISNet_pde_solver_refinement_v1_from_state_dict(
-                state_dict,
-                1, # N_freqs -- always using it as 1 in this case
-                epoch_results_dd=shd_fi,
-                N_h=shd_fi["n_h_vals"],
-                use_pred_d_mh=False,
             )
         else:
             raise KeyError(

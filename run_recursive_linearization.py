@@ -680,7 +680,7 @@ def main(args: argparse.Namespace) -> None:
             d_rs_kt = add_noise_to_d(
                 d_rs_kt,
                 args.noise_to_signal_ratio,
-                noise_seed=eff_noise_seed_ti, # TODO: check if this works
+                noise_seed=eff_noise_seed_ti,
                 seed_mode="sequential",
                 norm_mode=args.noise_norm_mode,
             )
@@ -790,7 +790,6 @@ def main(args: argparse.Namespace) -> None:
             # logging.info(f"Consider clearing the jax caches after each sample if there are still problems")
             # jax.clear_caches()
 
-            # logging.info(f"Periodically write to disk... (todo)")
             if (i+1) % args.write_every_n == 0 or (i+1==N_samples):
                 if made_changes_in_chunk:
                     logging.info(f"Writing to disk!")
@@ -879,8 +878,6 @@ def main(args: argparse.Namespace) -> None:
         return
     else:
         logging.info(f"Marking the file as complete!")
-
-    # logging.info(f"TODO: also evaluate the prediction quality against the reference scattering objects")
 
     _ = evaluate_q_cart(
         ref_scobj_dir,

@@ -599,7 +599,6 @@ def main(
             write_result_to_file(args.train_results_fp, **train_log_dd)
 
             if args.save_all_model_weights:
-                # TODO: figure out where to save this???
                 model_fp = os.path.join(
                     args.model_weights_dir,
                     f"model_params_f{args.freq_idx}_epoch_{epoch_overall}.pickle"
@@ -678,7 +677,6 @@ def main(
     logging.info(f"Selected train log... {cbi_train_log_dd}")
 
     # 5b. Save model to disk
-    # TODO: identify the centralized location to save weights to
     if not args.save_all_model_weights:
         model_fp = os.path.join(
             args.model_weights_dir,
@@ -866,8 +864,6 @@ def main(
         logging.info(msg)
         print(msg)
 
-
-    # TODO: maybe should update the central summary file now
     out_central_summary_dd = {
         **out_central_summary_dd,
         summary_key: {

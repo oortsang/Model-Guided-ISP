@@ -97,6 +97,9 @@ In case you need to inspect individual files, the pipeline generation command cr
 ## Recursive linearization baseline
 The RecLin baseline can be invoked using [Badger](https://github.com/oortsang/badger-modified) as `python -m badger experiments/2025-10-31_config_rl_mod_{noise,ood}.yaml`. Note that you may need to set up the `logs/rl/` directory ahead of time for the Slurm submission to work; we offer a `make_log_dirs.sh` script to automatically create this directory, along with other log directories that may be required for the other experiments.
 
+## Wide-band Equivariant Network baseline
+For this work, we also compared against the Wide-band Equivarianet Network (Uncompressed) ([Zhang et al., 2024](https://doi.org/10.1016/j.cam.2024.116050)). We used the code provided by the authors, [in this repo](https://github.com/borongzhang/ISP_baseline), which we adapted for use with our dataset (layout, number of frequencies, image resolution) in [our fork](https://github.com/oortsang/ISP_baseline_fork).
+
 ## Dataset
 The dataset will be made available [via Zenodo](https://doi.org/10.5281/zenodo.21939523) (note: link may not be live yet). There are up to 10,000 scattering potentials in the training set and 1,000 in each of the validation and test sets. The measurements correspond to $\nu=k/2\pi=1,2,3,\dots,10$ (i.e., the wavelength goes from 1 per domain sidelength to 10 per domain sidelength).
 

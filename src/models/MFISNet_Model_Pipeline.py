@@ -36,9 +36,9 @@ from src.models.MFISNet_Refinement_Block import (
     MFISNet_Refinement_Block,
     load_MFISNet_Refinement_Block_from_state_dict,
 )
-from src.models.MFISNet_Fused import (
-    MFISNet_Fused,
-    load_MFISNet_Fused_from_state_dict,
+from src.models.FYNet import (
+    FYNetInverse,
+    load_FYNetInverse_from_state_dict,
 )
 
 from src.utils.vram_info import get_memory_info, free_vram
@@ -56,7 +56,7 @@ from solvers.hps.wave_scattering import (
 
 class MFISNet_Model_Pipeline(torch.nn.Module):
     """A class that allows for the combination of multiple
-    MFISNet-Fused or MFISNet-PDE-Solver-Refinement objects
+    FYNet or MFISNet-Refinement-Block objects
     """
     def __init__(
         self,
@@ -406,10 +406,9 @@ def load_MFISNet_Model_Pipeline_from_state_dict(
 
         # Next, load the block according to type as block_fi
         if block_type == "fynet":
-            # Load FYNet / MFISNet-Fused
-            block_fi = load_MFISNet_Fused_from_state_dict(
+            # Load FYNet
+            block_fi = load_FYNetInverse_from_state_dict(
                 state_dict,
-                1, # N_freqs -- always using it as 1 in this case
             )
         elif block_type == "mref" or block_type == "mfisnet-refinement":
             # Load MFISNet-Refinement

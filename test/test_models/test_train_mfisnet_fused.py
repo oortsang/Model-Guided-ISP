@@ -3,7 +3,7 @@ import numpy as np
 import os, shutil, time
 import torch
 
-from train_MFISNet_Fused import (
+from train_MFISNet_Fused_new_interface import (
     main as train_mfisnet_fused_main
 )
 
@@ -189,6 +189,9 @@ class Test_train_mfisnet:
                 n_cnn_channels_2d=24,
                 kernel_size_1d=60,
                 kernel_size_2d=7,
+                # train_MFISNet_Fused_new_interface.py currently hardcodes both of
+                # these to True internally and ignores these args entirely; kept
+                # here (set to matching values) in case that changes later.
                 merge_middle_freq_channels="true",
                 polar_padding="true",
                 batch_size=16,

@@ -18,9 +18,9 @@ from src.data.data_io import (
     load_hdf5_to_dict,
     load_field_in_hdf5,
     update_field_in_hdf5,
-    get_file_start_index,
     load_single_dir_slice,
 )
+from src.data.layout import get_file_start_index
 from src.data.add_noise import add_noise_to_d
 
 from src.data.data_naming_constants import (

@@ -28,10 +28,10 @@ from src.data.data_transformations import (
 from src.data.data_io import (
     load_hdf5_to_dict,
     load_field_in_hdf5,
-    _get_number_from_filename,
     load_multifreq_dataset,
     load_scobj_dir,
 )
+from src.data.layout import _file_start_idx as _get_number_from_filename
 from src.utils.logging_utils import FMT, TIMEFMT, find_best_epoch
 from src.data.data_naming_constants import (
     KEYS_FOR_EXPERIMENT_INFO_OUT,

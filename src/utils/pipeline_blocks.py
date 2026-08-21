@@ -660,6 +660,13 @@ class MMGTaskPipeline(TaskPipeline):
         if verbosity >= 1:
             print(f"Received command_str={command_str}")
 
+        # The code corresponding to running the entire pipeline
+        # (computed unconditionally so "all"/"none" can also display it)
+        full_code_str, full_code_obj = self.sequential_tasks.get_codes(delim=" ")
+        if verbosity >= 1+VLVL_RUN_PLAN:
+            print(f"Full pipeline code str: {full_code_str}")
+            print(f"Full pipeline code obj:\n{str(full_code_obj)}")
+
         if command_str == "all":
             selected_task_list = self.task_list
             selected_tasks = self.sequential_tasks
@@ -671,12 +678,6 @@ class MMGTaskPipeline(TaskPipeline):
             if verbosity >= VLVL_RUN_PLAN:
                 print(f"Running nothing")
         else:
-            # The code corresponding to running the entire pipeline
-            full_code_str, full_code_obj = self.sequential_tasks.get_codes(delim=" ")
-            if verbosity >= 1+VLVL_RUN_PLAN:
-                print(f"Full pipeline code str: {full_code_str}")
-                print(f"Full pipeline code obj:\n{str(full_code_obj)}")
-
             # Process the commands by going through the full pipeline and executing
             # the relevant tasks/subtasks when relevant
             command_str   = command_str.strip(" ")

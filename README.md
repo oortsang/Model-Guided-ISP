@@ -45,7 +45,7 @@ This repository contains several neural network models, as well as several other
 - Recursive linearization algorithm, using the HPS solver
 - Utilities to manage the training/evaluation pipeline on SLURM clusters, which helps to parallelize the PDE solves during training
 
-Additionally, we provide an notebook in `illustrative_small_scale_hpscnn_training.ipynb` for the sake of illustrating the end-to-end training process, which sets up and trains the `HPS-CNN` architecture for a small dataset of N=100 samples. Please note that this code is not optimized for speed or accuracy, so for our production implementation please refer to the "Training" and "Running pipelines" sections.
+Additionally, we provide a notebook in `illustrative_small_scale_hpscnn_training.ipynb` for the sake of illustrating the end-to-end training process, which sets up and trains the `HPS-CNN` architecture for a small dataset of N=100 samples. Please note that this code is not optimized for speed or accuracy, so for our production implementation please refer to the "Training" and "Running pipelines" sections.
 
 ## Environment setup
 
@@ -164,7 +164,7 @@ Note that this is a different solver from what we use in HPS-CNN, so we avoid an
 The scripts used to generate the dataset are located in `data_generation_main` (for the primary dataset) and `data_generation_ood` (for scattering potentials with out-of-distribution contrasts).
 
 ## Notes on naming
-Within the code, we adopt somewhat different naming from the paper (some of these evolved over time). We refer to the "negative gradient of error in measurement space" as the "measurement misfit gradient," or abbreviated as "MMG." Similarly, the learned component of the refinement blocks is named "MMGUBlock" for "MMG Update Block." Additionally, we invoke FYNet blocks using the MFISNet-Fused interface from our previous work, as it is strictly more general.
+Within the code, we adopt somewhat different naming from the paper (some of these evolved over time). We refer to the "negative gradient of error in measurement space" as the "measurement misfit gradient," or abbreviated as "MMG." Similarly, the learned component of the refinement blocks is named "MMGUBlock" for "MMG Update Block."
 
 ## Citation
 If this code is helpful to your research, please cite our pre-print (and stay tuned for the forthcoming published version):

@@ -20,10 +20,10 @@ definitions:
       fake_submission: false
       overwrite_scripts: true
   constants:
-    base_dir: &BASE_DIR "/home-nfs/oortsang/rlc-repo"
-    pred_dir: &PRED_DIR "/home-nfs/oortsang/rlc-repo/rlc_data/predictions"
-    ref_scobj_dir: &REF_SCOBJ_DIR "/home-nfs/oortsang/rlc-repo/dataset"
-    input_meas_dir: &INPUT_MEAS_DIR "/home-nfs/oortsang/rlc-repo/dataset"
+    base_dir: &BASE_DIR "/home-nfs/oortsang/model-guided-isp"
+    pred_dir: &PRED_DIR "/home-nfs/oortsang/model-guided-isp/mg_data/predictions"
+    ref_scobj_dir: &REF_SCOBJ_DIR "/home-nfs/oortsang/model-guided-isp/dataset"
+    input_meas_dir: &INPUT_MEAS_DIR "/home-nfs/oortsang/model-guided-isp/dataset"
     init_scobj_dir: &INIT_SCOBJ_DIR ""
     dset: &DSET "test"
     num_samples: &NUM_SAMPLES 1000
@@ -187,7 +187,7 @@ arguments:
   - !Scalar
     name: hps_sd_mat_dir
     prefix: "--hps_sd_mat_dir"
-    value: "rlc_data/HPS_SD_matrices"
+    value: "HPS_SD_matrices"
 
   - !Scalar
     name: receiver_radius

@@ -158,6 +158,17 @@ def setup_args() -> argparse.Namespace:
 
     parser.add_argument("--write_every_n", type=int, default=1)
     parser.add_argument("--debug", default=False, action="store_true")
+    parser.add_argument(
+        "--log_level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help=(
+            "Logging level for this script's own messages (and any third-party "
+            "loggers). Note jaxhps only ever logs at DEBUG, so DEBUG will include "
+            "its (verbose) internal messages; INFO will not."
+        ),
+    )
 
     # RecLin arguments
     parser.add_argument("--gn_iters_per_freq", type=int, default=1)
@@ -885,12 +896,12 @@ if __name__ == "__main__":
     root = logging.getLogger()
 
     handler = logging.StreamHandler(sys.stderr)
-    if a.debug:
-        handler.level = logging.DEBUG
-        root.setLevel(logging.DEBUG)
-    else:
-        handler.level = logging.WARNING
-        root.setLevel(logging.WARNING)
+    # --debug is kept as a shorthand for full DEBUG output (including jaxhps's
+    # own logging.debug(...) calls, which are otherwise never shown since
+    # jaxhps never logs above DEBUG); --log_level gives finer control.
+    log_level = logging.DEBUG if a.debug else getattr(logging, a.log_level)
+    handler.level = log_level
+    root.setLevel(log_level)
 
     formatter = logging.Formatter(FMT, datefmt=TIMEFMT)
     handler.setFormatter(formatter)

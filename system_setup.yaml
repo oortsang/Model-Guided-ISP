@@ -13,7 +13,7 @@
 
 file-paths:
   repo-dir: "/home-nfs/oortsang/model-guided-isp"
-  data-rel-dir: "rlc_data"
+  data-rel-dir: "mg_data"
   main-dataset: "dataset"
   ood-dataset: "ood_dataset"
   hps-sd-mat-dir: "HPS_SD_matrices"

@@ -15,7 +15,6 @@ dirs=(
   logs/mmg_pipeline/train_fynet
   logs/mmg_pipeline/eval_fynet
   logs/mmg_pipeline/train_mmgu
-  logs/mmg_pipeline/eval_mmgu
   logs/mmg_pipeline/train_mref
   logs/mmg_pipeline/eval_mref
   logs/mmg_pipeline/train_e2e_mref

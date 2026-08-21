@@ -45,8 +45,7 @@ This repository contains several neural network models, as well as several other
 - Recursive linearization algorithm, using the HPS solver
 - Utilities to manage the training/evaluation pipeline on SLURM clusters, which helps to parallelize the PDE solves during training
 
-Additionally, we provide an notebook in `2026-08-03_demo_training_loop.ipynb` for demonstration purposes, which sets up and trains the `HPS-CNN` architecture for a small dataset of N=100 samples.
-
+Additionally, we provide an notebook in `illustrative_small_scale_hpscnn_training.ipynb` for the sake of illustrating the end-to-end training process, which sets up and trains the `HPS-CNN` architecture for a small dataset of N=100 samples. Please note that this code is not optimized for speed or accuracy, so for our production implementation please refer to the "Training" and "Running pipelines" sections.
 
 ## Environment setup
 
@@ -76,7 +75,10 @@ The initial block is taken as an FYNet architecture, while subsequent refinement
 Since we process a single frequency at a time, the process can be separated into alternating training phases and HPS-application phases.
 This means we only need to call the HPS solver `N_samples*(N_k - 1)` times instead of `N_epochs*N_samples*(N_k-1)`, as an end-to-end strategy may require. Thus, the additional training cost incurred by including a PDE solver is relatively modest under this strategy.
 
-Additionally, our training pipeline takes advantage of the embarassingly parallel nature of the HPS-application phases by splitting up this task among a number of Slurm nodes; this is helpful to reduce the wall-clock time, especially for larger training sets (e.g., we go up to 10,000 training samples, each with 10 frequencies).
+See `train_MFISNet_Fused.py`, `generate_meas_misfit_files.py`, and `train_MMGUBlock.py` for the block-wise training (and PDE solver application) scripts.
+
+## Running pipelines
+Additionally, our training (and evaluation) pipeline takes advantage of the embarassingly parallel nature of the HPS-application phases by splitting up this task among a number of Slurm nodes; this is helpful to reduce the wall-clock time, especially for larger training sets (e.g., we go up to 10,000 training samples, each with 10 frequencies).
 
 We place the configuration files to reproduce the experiments from our paper within the `experiments` directory. These can be invoked as:
 

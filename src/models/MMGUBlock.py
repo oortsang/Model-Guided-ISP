@@ -91,7 +91,7 @@ class CNN2DCartesian(torch.nn.Module):
         return out
 
 class MMGUBlock(torch.nn.Module):
-    """Measurement misfit gradient update block (placeholder name...)
+    """Measurement misfit gradient update block (the learned part of the HPS-CNN architecture)
     Inspired by recursive linearization by using measurement misfit gradients
     gamma = (DF[qhat]^*(dk-F[qhat]))
     along with qhat to update the estimate

@@ -16,6 +16,8 @@ import re
 import shutil
 
 import numpy as np
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.utils.logging_utils import FMT, TIMEFMT, load_yaml_to_dict
 
 

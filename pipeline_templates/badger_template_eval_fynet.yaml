@@ -1,6 +1,6 @@
 ---
 definitions:
-  command: python select_hyperparameter_from_runs.py
+  command: python scripts/select_hyperparameter_from_runs.py
   # command: echo
   # template: "<<rlc-repo>>/<<templates-rel-dir=mpsr_scripts>>/\
   #   base_template_eval_FYNet.jinja"
@@ -55,7 +55,7 @@ arguments:
   - !Scalar { name: predictions_dir, value: *PREDICTIONS_DIR }
 
   # Extras from the config file
-  - !Scalar { name: fetch_result_command, value: "python fetch_result_entry.py" }
+  - !Scalar { name: fetch_result_command, value: "python scripts/fetch_result_entry.py" }
   - !Scalar { name: central_results_fp, value: "<<central-results-fp>>" }
   - !Scalar { name: central_model_dir, value: "<<central-model-dir>>" }
   - !Scalar { name: central_model_format, value: "<<central-model-format>>" }

@@ -1,4 +1,4 @@
-# replace_fields_in_chevrons.py: a driver script that applies string replacements
+# scripts/replace_fields_in_chevrons.py: a driver script that applies string replacements
 # of the form <<var>> with a corresponding value, specified by the replacement map.
 # Default values may be provided as <<var=DEFAULT>>; if --use-defaults=true and a
 # value for var is not supplied, the chevrons will be replaced by this default value.
@@ -7,16 +7,16 @@
 #
 # This file supports several usage patterns:
 # 1. Files in/out:
-#     python replace_fields_in_chevrons "a:5;b:10" <in-file> <out-file>
+#     python scripts/replace_fields_in_chevrons.py "a:5;b:10" <in-file> <out-file>
 # This applies replacements to the contents of input as the output file
 # 2. Streams in/out:
-#     echo "blah <<a>> <<c=15>>" | python replace_fields_in_chevrons "a:5;b:10"
+#     echo "blah <<a>> <<c=15>>" | python scripts/replace_fields_in_chevrons.py "a:5;b:10"
 #     (outputs "blah 5 15" to stdout)
 # Outputs to stdout
 # 3. Mixing in/out streams/files; make sure to pass input/output files explicitly as
 # --in-file/--out-file arguments as needed
 # 4. Configuration file for template modification
-#     python replace_fields_in_chevrons <config-yaml>
+#     python scripts/replace_fields_in_chevrons.py <config-yaml>
 # In this case, the config file is treated as the replacement_map, and
 # template is expected to have the following entries:
 #     template-file: <the yaml file to use as the input file>
@@ -38,6 +38,7 @@ import yaml
 import argparse
 import os, sys
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.utils.replace_fields_utils import (
     FULL_WILDCARD_PATTERN,
     SMALL_WILDCARD_PATTERN,

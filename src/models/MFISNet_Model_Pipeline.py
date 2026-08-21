@@ -411,8 +411,19 @@ def load_MFISNet_Model_Pipeline_from_state_dict(
                 state_dict,
                 1, # N_freqs -- always using it as 1 in this case
             )
+        elif block_type == "mref" or block_type == "mfisnet-refinement":
+            # Load MFISNet-Refinement
+            block_fi = load_MFISNet_Refinement_Block_from_state_dict(
+                state_dict,
+                1, # N_freqs -- always using it as 1 in this case
+                epoch_results_dd=shd_fi,
+                N_h=shd_fi["n_h_vals"],
+                use_pred_d_mh=False,
+            )
         elif block_type == "mpsr" or block_type == "psr" \
              or block_type == "pde-solver-refinement":
+            # Note: this is vestigial code from a former
+            # MFISNet-PDE-Solver-Refinement idea
             # Prepare the solver
             use_solver = True
             # Set up any PDE solvers, if necessary
@@ -450,15 +461,6 @@ def load_MFISNet_Model_Pipeline_from_state_dict(
                 epoch_results_dd=shd_fi,
                 N_h=shd_fi["n_h_vals"],
                 use_pred_d_mh=True,
-            )
-        elif block_type == "mref" or block_type == "mfisnet-refinement":
-            # Load MFISNet-Refinement
-            block_fi = load_MFISNet_Refinement_Block_from_state_dict(
-                state_dict,
-                1, # N_freqs -- always using it as 1 in this case
-                epoch_results_dd=shd_fi,
-                N_h=shd_fi["n_h_vals"],
-                use_pred_d_mh=False,
             )
         else:
             raise KeyError(

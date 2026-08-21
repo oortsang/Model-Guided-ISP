@@ -16,11 +16,13 @@ import argparse
 # import tqdm
 
 # PDE solver
-from solvers.integral_equation.HelmholtzSolverDifferentiable import (
-    setup_differentiable_solver,
-    HelmholtzSolverDifferentiable,
-    PytorchPDESolver,
+from solvers.integral_equation.helmholtz_solver_bicgstab import (
+    setup_bicgstab_solver,
+    HelmholtzSolverBicgstab,
     NP_CDTYPE, TORCH_CDTYPE, TORCH_RDTYPE,
+)
+from solvers.integral_equation.helmholtz_solver_gradients import (
+    PytorchPDESolver,
 )
 
 # Models/dataset

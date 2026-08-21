@@ -17,11 +17,13 @@ from typing import Tuple, Callable, Dict
 import argparse
 
 # PDE solver
-from solvers.integral_equation.HelmholtzSolverDifferentiable import (
-    setup_differentiable_solver,
-    HelmholtzSolverDifferentiable,
-    PytorchPDESolver,
+from solvers.integral_equation.helmholtz_solver_bicgstab import (
+    setup_bicgstab_solver,
+    HelmholtzSolverBicgstab,
     NP_CDTYPE, TORCH_CDTYPE, TORCH_RDTYPE,
+)
+from solvers.integral_equation.helmholtz_solver_gradients import (
+    PytorchPDESolver,
 )
 
 # Models/dataset
@@ -265,8 +267,8 @@ def train_pipeline_e2e(
     eval_dloader,
     loss_function,
     log_function: Callable,
-    device: torch.cuda.Device,
-    solver_obj: HelmholtzSolverDifferentiable,
+    device: torch.cuda.device,
+    solver_obj: HelmholtzSolverBicgstab,
     pde_solver_config: Dict,
     polar_to_cart_fn: Callable,
     rs_to_mh_fn: Callable,
@@ -293,7 +295,7 @@ def train_pipeline_e2e(
             the loss function but also helps to computer other error statistics
         log_function (Callable): a function that performs the logging tasks periodically and evaluates the model
         device (torch.cuda.device): the cuda device to use for this training process
-        solver_obj (HelmholtzSolverDifferentiable): the differentiable PDE solver in case the d_rs loss term is in use
+        solver_obj (HelmholtzSolverBicgstab): the differentiable PDE solver in case the d_rs loss term is in use
         polar_to_cart_fn (Callable): coordinate transform that moves an object from the polar grid to the cartesian grid
         rs_to_mh_fn (Callable): coordinate transform that moves an object from the (r, s) grid to the (m, h) grid
         d_rs_loss_weight (float): weight for the d_rs loss term
@@ -768,7 +770,7 @@ def main(
         # Set up the solver at the last frequency
         nu_last = nu_list[-1]
         prepare_half_grid = (args.pde_fwd_use_half_grid or args.pde_adj_use_half_grid)
-        solver_obj = setup_differentiable_solver(
+        solver_obj = setup_bicgstab_solver(
             N_x, args.pde_spatial_domain_max, nu_last, args.pde_receiver_radius,
             device=device,
             prepare_half_grid=prepare_half_grid,

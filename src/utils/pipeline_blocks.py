@@ -450,7 +450,6 @@ class TrainMRefPipeline(SoloTask):
             save_field_mapping={},
             printable_io_fields={
                 REF_DATASET_REL_DIR: "ref dataset dir",
-                OUTPUT_PRED_SCOBJ_DIR: "output pred dir",
                 LAST_OUTPUT_PRED_SCOBJ_DIR: "pred dataset dir",
                 "train-targets": "train targets",
             },
@@ -871,9 +870,6 @@ def get_standard_mmg_settings(repo_dir: str = None, rlc_data_dir: str = None):
         "badger-template-train-mmgu":  "<<templates-rel-dir>>/badger_template_train_mmgublock.yaml",
         "base-template-eval-mmgu":     "<<templates-rel-dir>>/base_template_eval_mmgublock.jinja",
         "badger-template-eval-mmgu":   "<<templates-rel-dir>>/badger_template_eval_mmgublock.yaml",
-
-        "base-template-eval-mmgu-gen":   "<<templates-rel-dir>>/base_template_eval_mmgublock_generalized.jinja",
-        "badger-template-eval-mmgu-gen": "<<templates-rel-dir>>/badger_template_eval_mmgublock_generalized.yaml",
 
         # MFISNet-Refinement per-frequency block stuff
         "base-template-train-refinement-block":    "<<templates-rel-dir>>/base_template_train_refinement_block.jinja",

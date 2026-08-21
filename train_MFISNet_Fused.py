@@ -1,8 +1,7 @@
 # Train the MFISNet-Fused variant from the previous paper
 # NOTE: when given a single frequency, this is equivalent to FYNet.
-# This version of the code is better-maintained, so I dropped
-# train_FYNet.py and direct invocation of FYNet.
-# This new-interface variant of the code
+# train_FYNet.py is a thin wrapper around this script that enforces
+# the single-frequency case.
 
 import logging
 from typing import List

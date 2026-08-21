@@ -144,10 +144,6 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         "central-model-dir":        "<<central-run-dir>>/models/",
         "central-model-format":     "model_params_<<freq-idx>>.pickle",
 
-        # Override the default template choice...
-        "base-template-eval-mmgu":     "<<base-template-eval-mmgu-gen>>",
-        "badger-template-eval-mmgu":   "<<badger-template-eval-mmgu-gen>>",
-
         # Meta.. where to save this task pipeline?
         "scripts-task-pipeline-fp": "<<scripts-dir>>/task_pipeline.pickle",
 
@@ -308,7 +304,7 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
     eval_mmgublock_settings = {
         **incoming_pipeline_settings,
         "model-date": "<<inc-model-date>>",
-        "model-base-name": "<<inc-mmgu-base-name>>",
+        "model-base-name": "<<inc-mmgublock-base-name>>",
         "cleanup": False,
         "seed": 29384,
         "log-batch-size": 50,

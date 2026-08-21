@@ -189,11 +189,6 @@ class Test_train_mfisnet:
                 n_cnn_channels_2d=24,
                 kernel_size_1d=60,
                 kernel_size_2d=7,
-                # train_MFISNet_Fused_new_interface.py currently hardcodes both of
-                # these to True internally and ignores these args entirely; kept
-                # here (set to matching values) in case that changes later.
-                merge_middle_freq_channels="true",
-                polar_padding="true",
                 batch_size=16,
                 n_epochs=10,
                 lr_init=1e-3,
@@ -236,7 +231,7 @@ class Test_train_mfisnet:
             }
             print(f"Header: {header}")
             print(f"Epochs: {file_dict['epoch']}")
-            print(f"Rel l2 (val):   {file_dict['eval_final_rel_l2']}")
+            print(f"Rel l2 (val):   {file_dict['val_final_rel_l2']}")
             print(f"Rel l2 (train): {file_dict['train_rel_l2']}")
 
 
@@ -249,7 +244,7 @@ class Test_train_mfisnet:
             device = device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             model_orig.to(device) # ensure this is also on the same device
             model_state_dict = torch.load(model_fp, map_location=device)
-            model_loaded = load_MFISNet_Fused_from_state_dict(model_state_dict, N_freqs, polar_padding=True)
+            model_loaded = load_MFISNet_Fused_from_state_dict(model_state_dict, N_freqs)
             model_loaded = model_loaded.to(device)
             model_loaded.eval()
 

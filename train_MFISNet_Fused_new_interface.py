@@ -164,12 +164,6 @@ def main(
     3. Set up NN
     4. Train NN
     """
-    # Simplify stuff a little
-    mmfc_bool = True
-    polar_padding_bool = True
-    args.merge_middle_freq_channels_bool = mmfc_bool
-    args.polar_padding_bool = polar_padding_bool
-
     if not os.path.isdir(args.model_weights_dir):
         os.mkdir(args.model_weights_dir)
 
@@ -301,10 +295,8 @@ def main(
         w_2d=args.kernel_size_2d,
         N_cnn_1d=args.n_cnn_1d,
         N_cnn_2d=args.n_cnn_2d,
-        merge_middle_freq_channels=args.merge_middle_freq_channels_bool,
         big_init=args.big_init,
         init_mode=args.init_mode,
-        polar_padding=args.polar_padding_bool,
         **extra_params,
     )
 
@@ -403,8 +395,6 @@ def main(
                     "n_cnn_2d": args.n_cnn_2d,
                     "n_cnn_channels_1d": args.n_cnn_channels_1d,
                     "n_cnn_channels_2d": args.n_cnn_channels_2d,
-                    "merge_middle_freq_channels": args.merge_middle_freq_channels_bool,
-                    "polar_padding": args.polar_padding_bool,
                     "kernel_size_1d": args.kernel_size_1d,
                     "kernel_size_2d": args.kernel_size_2d,
                     "lr_init": args.lr_init,

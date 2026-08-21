@@ -408,7 +408,6 @@ def load_MFISNet_Model_Pipeline_from_state_dict(
             block_fi = load_MFISNet_Fused_from_state_dict(
                 state_dict,
                 1, # N_freqs -- always using it as 1 in this case
-                polar_padding=True, # Also, just stick to yes for consistency
             )
         elif block_type == "mpsr" or block_type == "psr" \
              or block_type == "pde-solver-refinement":

@@ -206,7 +206,6 @@ def main(args: argparse.Namespace) -> None:
         args.training_results_fp, args.training_results_key, selection_mode="min"
     )
     best_epoch = best_epoch_dd["epoch"]
-    hps_polar_padding = best_epoch_dd["polar_padding"]
     logging.info(f"Best epoch: {best_epoch}")
 
     # model_fp = os.path.join(args.model_dir, args.model_fp_format.format(best_epoch))
@@ -307,7 +306,7 @@ def main(args: argparse.Namespace) -> None:
     ##### Load model from disk #####
     model_state_dict = torch.load(model_fp, map_location=device)
     model = load_MFISNet_Fused_from_state_dict(
-        model_state_dict, N_freqs, polar_padding=hps_polar_padding
+        model_state_dict, N_freqs
     )
     model = model.to(device)
     model.eval()

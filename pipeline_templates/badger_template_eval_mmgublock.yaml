@@ -38,14 +38,18 @@ arguments:
     prefix: "--input_pred_scobj_dir"
     value: *INPUT_PRED_SCOBJ_DIR
     metadata_rules: [ !SaveValueInMetadata {path: input_pred_scobj_dir} ]
-
   - !Scalar
     name: input_pred_mmg_dir
     prefix: "--input_pred_mmg_dir"
     value: *INPUT_PRED_MMG_DIR
     metadata_rules: [ !SaveValueInMetadata {path: input_pred_mmg_dir} ]
-
   - !Scalar { name: freq_idx, prefix: "--freq_idx", value: <<freq-idx=1>> }
+  - !Scalar
+    name: dset_names
+    prefix: "--dset_names"
+    value: "<<eval-dset-list>>" # expect this to be a list
+    metadata_rules: [ !SaveValueInMetadata { path: dset_names } ]
+
 
   # Weights and biases settings
   - !Scalar { name: debug, value: "--debug", prefix: "" }
@@ -62,23 +66,27 @@ arguments:
   # - !Scalar { name: selection_field, prefix: "--selection_field", value: <<selection-field>> }
   # - !Scalar { name: selection_mode, prefix: "--selection_mode", value: <<selection-mode>> }
 
-  - !Scalar
-    name: num_train
-    prefix: "--truncate_num_train"
-    value: <<num-train>>
-    metadata_rules: [ !SaveValueInMetadata { path: num_train } ]
+  # - !Scalar
+  #   name: num_train
+  #   prefix: "--truncate_num_train"
+  #   value: <<num-train>>
+  #   metadata_rules: [ !SaveValueInMetadata { path: num_train } ]
+  # - !Scalar
+  #   name: num_val
+  #   prefix: "--truncate_num_val"
+  #   value: <<num-val>>
+  #   metadata_rules: [ !SaveValueInMetadata { path: num_val } ]
+  # - !Scalar
+  #   name: num_test
+  #   prefix: "--truncate_num_test"
+  #   value: <<num-test>>
+  #   metadata_rules: [ !SaveValueInMetadata { path: num_test } ]
 
   - !Scalar
-    name: num_val
-    prefix: "--truncate_num_val"
-    value: <<num-val>>
-    metadata_rules: [ !SaveValueInMetadata { path: num_val } ]
-
-  - !Scalar
-    name: num_test
-    prefix: "--truncate_num_test"
-    value: <<num-test>>
-    metadata_rules: [ !SaveValueInMetadata { path: num_test } ]
+    name: truncate_nums
+    prefix: "--truncate_nums"
+    value: "<<eval-dset-nums>>" # expect a list
+    metadata_rules: [ !SaveValueInMetadata { path: truncate_nums } ]
 
   ##### Data settings #####
   - !Range
@@ -87,12 +95,12 @@ arguments:
     prefix: "--data_input_nus"
     metadata_rules: [ !SaveValueInMetadata { path: data_input_nus }]
 
+  # Mostly use this for tracking the setup info
   - !Range
     name: train_targets
     prefix: "--use_targets"
     values: [<<train-targets="smoothed", "original">>]
     metadata_rules: [ !SaveValueInMetadata {path: train_targets} ]
-
   - !Range
     name: eval_targets
     prefix: "--use_targets"
@@ -111,17 +119,21 @@ arguments:
     value: "<<use-noise-seed=true>>"
     prefix: "--use_noise_seed"
   - !Scalar
-    name: noise_seed_train
-    value: "$((<<noise-seed-train>>))"
-    prefix: "--noise_seed_train"
-  - !Scalar
-    name: noise_seed_val
-    value: "$((<<noise-seed-val>>))"
-    prefix: "--noise_seed_val"
-  - !Scalar
-    name: noise_seed_test
-    value: "$((<<noise-seed-test>>))"
-    prefix: "--noise_seed_test"
+    name: noise_seeds
+    value: "$((<<noise-seeds>>))"
+    prefix: "--noise_seeds"
+  # - !Scalar
+  #   name: noise_seed_train
+  #   value: "$((<<noise-seed-train>>))"
+  #   prefix: "--noise_seed_train"
+  # - !Scalar
+  #   name: noise_seed_val
+  #   value: "$((<<noise-seed-val>>))"
+  #   prefix: "--noise_seed_val"
+  # - !Scalar
+  #   name: noise_seed_test
+  #   value: "$((<<noise-seed-test>>))"
+  #   prefix: "--noise_seed_test"
 
   # ##### Architectural parameters #####
   # - !Range

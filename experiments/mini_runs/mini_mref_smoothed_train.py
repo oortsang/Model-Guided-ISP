@@ -56,19 +56,19 @@ from src.utils.replace_fields_utils import (
 
 
 # Commonly updated stuff
-RUN_DATE_VAL = "2025-09-17"
+RUN_DATE_VAL = "2026-08-20"
 
 STR_NU_LIST_VAL    = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
-WHOLE_RUN_NAME_VAL = "mref_Nk_10_(1,2,3,4,5,6,7,8,9,10)_ntr_100_targets_smoothed_epochs_300"
-WANDB_PROJECT_VAL  = "2025-09-03_mmg_pipeline"
+WHOLE_RUN_NAME_VAL = "mini_mref_smoothed"
+WANDB_PROJECT_VAL  = "none"
 
 # Debugging settings...
 # print(f"NOTE: #EPOCHS AND #TRAINING SAMPLES HAVE BEEN SIGNIFICANTLY LOWERED")
-NUM_TRAIN = 100
-NUM_VAL   = 1000
-NUM_TEST  = 1000
+NUM_TRAIN = 10
+NUM_VAL   = 10
+NUM_TEST  = 10
 
-NUM_EPOCHS = 300
+NUM_EPOCHS = 100
 NUM_E2E_EPOCHS = 100
 MREF_TARGETS = "smoothed"
 

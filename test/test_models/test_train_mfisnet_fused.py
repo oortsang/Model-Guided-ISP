@@ -3,7 +3,7 @@ import numpy as np
 import os, shutil, time
 import torch
 
-from train_MFISNet_Fused_new_interface import (
+from train_MFISNet_Fused import (
     main as train_mfisnet_fused_main
 )
 

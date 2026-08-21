@@ -10,11 +10,13 @@ import logging
 from typing import List, Dict, Callable
 import time
 
-from solvers.integral_equation.HelmholtzSolverDifferentiable import (
-    setup_differentiable_solver,
-    HelmholtzSolverDifferentiable,
-    PytorchPDESolver,
+from solvers.integral_equation.helmholtz_solver_bicgstab import (
+    setup_bicgstab_solver,
+    HelmholtzSolverBicgstab,
     NP_CDTYPE, TORCH_CDTYPE, TORCH_RDTYPE
+)
+from solvers.integral_equation.helmholtz_solver_gradients import (
+    PytorchPDESolver,
 )
 
 from src.data.data_transformations import (
@@ -77,7 +79,7 @@ class MFISNet_Model_Pipeline(torch.nn.Module):
         Parameters:
             blocks (list of pytorch models): a list of neural network blocks,
                 intended to be one per frequency used
-            solvers (list of HelmholtzSolverDifferentiable objects):
+            solvers (list of HelmholtzSolverBicgstab objects):
                 Differentiable PDE solvers for each frequency
                 Could optionally set this up inside the function in the future?
                 ***Note this is one element shorter than the solvers list, since the PDE solver is
@@ -85,7 +87,7 @@ class MFISNet_Model_Pipeline(torch.nn.Module):
             freq_list (list of floats): the list of angular frequencies k of the expected data
             pde_solver_config (dictionary): configuration dictionary for the PDE solvers
                 For now, just share the same configuration at every frequency.
-                Refer to the HelmholtzSolverDifferentiable code for the relevant keys.
+                Refer to the HelmholtzSolverBicgstab code for the relevant keys.
             block_types (list of strings): optionally indicate what each type of block is
                 for later display/debugging convenience...
             N_x, N_rho, N_theta, N_h (all ints):
@@ -434,7 +436,7 @@ def load_MFISNet_Model_Pipeline_from_state_dict(
                 )
                 logging.info(f"Finished setting up the HPS solver")
             else:
-                solver_obj = setup_differentiable_solver(
+                solver_obj = setup_bicgstab_solver(
                     N_x, spatial_domain_max, nu_val, receiver_radius, device=device,
                     prepare_half_grid=True,
                 )

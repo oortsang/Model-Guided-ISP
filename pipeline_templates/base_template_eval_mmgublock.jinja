@@ -84,6 +84,7 @@ nvidia-smi -L
 
 {{ command }} \
     {{ data_input_nus }} \
+    {{ dset_names }} \
     {{ ref_dataset_dir }} \
     {{ input_pred_scobj_dir }} \
     {{ input_pred_mmg_dir }} \
@@ -91,13 +92,9 @@ nvidia-smi -L
     {{ out_central_summary_fp }} \
     {{ central_model_fp }} \
     {{ freq_idx }} \
-    {{ num_train }} \
-    {{ num_val }} \
-    {{ num_test }} \
+    {{ truncate_nums }} \
+    {{ noise_seeds }} \
     {{ use_noise_seed }} \
-    {{ noise_seed_train }} \
-    {{ noise_seed_val }} \
-    {{ noise_seed_test }} \
     {{ eval_targets }} \
     {{ noise_to_signal_ratio }} \
     {{ log_batch_size }} \
@@ -112,4 +109,4 @@ nvidia-smi -L
     # {{ selection_field }} \
     # {{ selection_mode }} \
 
->&2 echo "Exiting training script"
+>&2 echo "Exiting evaluation script"

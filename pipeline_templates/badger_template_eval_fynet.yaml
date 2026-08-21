@@ -20,7 +20,7 @@ definitions:
     mail_type: <<mail-type=end>>
     mail_user: <<mail-user="">>
 
-    command_2: python eval_MFISNet_Fused.py
+    command_2: python eval_FYNet.py
     evaluate_best_hyperparams: "true"
 
   submission:

@@ -2,6 +2,8 @@
 # submission occurs separately and involves calling run_pipeline
 # This is a variant of the pipeline specifically for evaluating
 # the MMG pipeline
+#
+# Evaluation-only config for the mini_hpscnn.py run, targeting OOD contrast 1.5.
 
 import re, os, sys, time, copy
 import pickle
@@ -33,9 +35,7 @@ from src.utils.pipeline_utils import (
     # VLVL_SBATCH_CMD,
 )
 from src.utils.pipeline_blocks import (
-    TrainFYNet,
     EvalFYNet,
-    TrainEvalMMGUBlock,
     EvalMMGUBlock,
     RunMMGSolver,
     MMGTaskPipeline,
@@ -55,36 +55,26 @@ from src.utils.replace_fields_utils import (
 
 # Commonly updated stuff
 STR_NU_LIST_VAL    = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
-WANDB_PROJECT_VAL  = "2025-09-16_mmg_Nk_10_early_runs"
+WANDB_PROJECT_VAL  = "none"
 
-# Incoming model info
-MODEL_DATE_VAL = "2025-10-02"
-INCOMING_WHOLE_RUN_NAME = "mmgu_Nk_10_(1,2,3,4,5,6,7,8,9,10)_train_original_ntr_1000_noise_0.0_epochs_300"
+# Incoming model info -- matches mini_hpscnn.py's own RUN_DATE_VAL/WHOLE_RUN_NAME_VAL
+MODEL_DATE_VAL = "2026-08-20"
+INCOMING_WHOLE_RUN_NAME = "mini_hpscnn_run"
 INC_NOISE_LEVEL = "0.0"
-NUM_TRAIN = 1000
-NUM_VAL   = 1000
-NUM_TEST  = 1000
+NUM_TRAIN = 10
+NUM_VAL   = 10
+NUM_TEST  = 10
 
-# # Incoming model info
-# MODEL_DATE_VAL = "2025-09-16"
-# INCOMING_WHOLE_RUN_NAME = "mmgu_Nk_10_(1,2,3,4,5,6,7,8,9,10)_train_original_ntr_100_noise_0.0_epochs_150"
-# INC_NOISE_LEVEL = "0.0"
-# NUM_TRAIN = 100
-# NUM_VAL   = 1000
-# NUM_TEST  = 1000
-
-
-RUN_DATE_VAL = "2025-11-03"
-WHOLE_RUN_NAME_VAL = "eval_mmgu_Nk_10_(1,2,3,4,5,6,7,8,9,10)_contrast_3.0"
+RUN_DATE_VAL = "2026-08-21"
+WHOLE_RUN_NAME_VAL = "eval_mini_hpscnn_run_contrast_1.5"
 
 # Eval data info
-# EVAL_DATASET = os.path.join("rlc_data", "predictions", "2025-09-23_shepp_logan_single")
-EVAL_DATASET = os.path.join(load_system_setup()["file-paths"]["ood-dataset"], "2025-09-23_ood_dataset_contrast_3.0")
+EVAL_DATASET = os.path.join(load_system_setup()["file-paths"]["ood-dataset"], "2025-09-23_ood_dataset_contrast_1.5")
 EVAL_NUM_TRAIN = 0
 EVAL_NUM_VAL   = 0
-EVAL_NUM_TEST  = 1000
+EVAL_NUM_TEST  = 10
 EVAL_DSET_LIST = ["test"]
-EVAL_DSET_NUMS = list(map(str,[EVAL_NUM_TEST]))
+EVAL_DSET_NUMS = list(map(str, [EVAL_NUM_TEST]))
 NOISE_LEVEL = "0.0"
 
 
@@ -148,26 +138,13 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         "scripts-task-pipeline-fp": "<<scripts-dir>>/task_pipeline.pickle",
 
         # General stuff
-        # "rlc-repo":                 rlc_repo_dir,
-        # "rlc-data":                 rlc_data_dir,
         "dataset-rel-dir":          EVAL_DATASET, # for FYNet/base
         "ref-dataset-rel-dir":      EVAL_DATASET, # for MMG/refinement-based stuff
         "ref-dataset-dir":          EVAL_DATASET, # for MMG/refinement-based stuff
         "dataset-dir":              EVAL_DATASET, # just in case
-        # "templates-rel-dir":        "pipeline_templates",
-        # "predictions-rel-dir":      f"{rlc_data_dir}/mmg_pipeline/predictions",
-        # "results-rel-dir":          f"{rlc_data_dir}/mmg_pipeline/results",
-        # "models-rel-dir":           f"{rlc_data_dir}/mmg_pipeline/models",
-        # "central-rel-dir":          f"{rlc_data_dir}/mmg_pipeline/central_run_info",
 
         # Slurm stuff
-        # "partition": "gpu",
-        # "num-cpu": 2,
-        # "num-gpu": 1,
         "exclude-node": '""',
-        # "mem": "50G",
-        # "mail-type": "NONE",
-        # "mail-user": "NONE",
         "wandb-project": WANDB_PROJECT_VAL,
 
         # Data settings
@@ -189,7 +166,6 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         "eval-targets":  "original",
 
         # noise seed and stuff
-        "noise-level": NOISE_LEVEL,
         "use-noise-seed": "true",
         "noise-seed-base-train": 10000000,
         "noise-seed-base-val":   20000000,
@@ -229,7 +205,6 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
     ### Block-wise settings ###
     eval_fynet_settings = {
         **incoming_pipeline_settings,
-        # "model-base-name": incoming_pipeline_settings["inc-fynet-base-name"],
         "model-base-name": "<<inc-fynet-base-name>>",
         "model-date": "<<inc-model-date>>",
         "output-pred-scobj-dir": (
@@ -238,16 +213,13 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         ),
 
         "central-model-dir": "<<inc-central-run-dir>>/models",
-        "central-results-fp": "<<central-run-dir>>/summary.yaml", # hope this works...
+        "central-results-fp": "<<central-run-dir>>/summary.yaml",
         "block-badger-fp": "<<scripts-dir>>/f<<freq-idx>>_badger_eval_fynet.yaml",
 
-        # Things copied from the mpsr pipeline
         "level-type": "fynet",
         "level-base-name": "eval_fynet_f<<freq-idx>>_for_<<whole-run-name>>",
         "delete-unused-models": "false",
         "eval-batch-size": 100,
-        # "train_targets": "original",
-        # "eval_targets": "original",
         "train_targets": "<<inc-train-targets>>",
         "eval_targets": "original",
         "output-common-name-format": "{run_date}_eval_{et}_train_{tt}_fynet_f<<freq-idx>>_for_<<whole-run-name>>",
@@ -299,7 +271,6 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
     }
     run_mmg_solver_settings = process_block_settings(run_mmg_solver_settings)
 
-    # dset_list =  ["train", "val", "test"]
     dset_list = EVAL_DSET_LIST
     eval_mmgublock_settings = {
         **incoming_pipeline_settings,
@@ -362,7 +333,6 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
     ### Set up the blocks and pipeline ###
     eval_fynet      = EvalFYNet("eval-fynet", eval_fynet_settings)
     run_mmg_solver  = RunMMGSolver("run-mmg-solver", dset_list, run_mmg_solver_settings)
-    # train_mmgublock = TrainEvalMMGUBlock("train-mmgublock", train_mmgublock_settings)
     eval_mmgublock  = EvalMMGUBlock("eval-mmgublock", eval_mmgublock_settings)
 
     init_block = FrequencyBlock("f1", [eval_fynet])
@@ -391,7 +361,6 @@ def setup_pipeline(verbosity: int = 3, generate_scripts: bool=True, **kwargs) ->
         # Now we use FYNet so these *shouldn't* be needed...
         # "last-output-pred-scobj-dir": "ERROR",
         # "last-output-pred-mmg-dir": "ERROR",
-        # "last-task": "train-fynet",
     }
     context_init = {**context}
 
@@ -431,10 +400,8 @@ def run_pipeline(command_str: str, use_pickled_pipeline: bool=False, verbosity: 
     in case there were any manual changes in the meantime
     """
     # does not currently allow us to control the sub-sections...
-    # main_pipeline.submit_scripts(sleep_time=0.5, verbosity=verbosity)
     save_object = setup_pipeline(
         verbosity=max(0,verbosity-2),
-        # verbosity=0,
         generate_scripts=(not use_pickled_pipeline),
         **kwargs
     )

@@ -36,7 +36,7 @@ if [[ {{ select_hyperparameters }} == "true" ]]; then
     # results_section="{{ results_section }}"
     # selection_field_name="{{ selection_field }}"
     # selection_mode="{{ selection_mode }}"
-    python select_hyperparameter_from_yamls.py \
+    python scripts/select_hyperparameter_from_yamls.py \
         --results-dir-base "{{ results_dir }}" \
         --results-file-pattern="{{ in_results_pattern }}" \
         --results-section="{{ results_section }}" \

@@ -9,6 +9,8 @@ import yaml
 import sys, os
 
 import numpy as np
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.utils.logging_utils import FMT, TIMEFMT, find_best_epoch, parse_val, update_field_in_yaml_file
 
 

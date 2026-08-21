@@ -20,7 +20,7 @@ from src.data.data_io import (
     load_multifreq_dataset,
 )
 
-from select_hyperparameter_from_runs import parse_val
+from scripts.select_hyperparameter_from_runs import parse_val
 from src.models.MFISNet_Fused import load_MFISNet_Fused_from_state_dict
 
 tiny_debugging_dataset = "test/assets/2024-05-28_tiny_debugging_dataset"

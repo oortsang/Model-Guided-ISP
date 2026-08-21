@@ -59,7 +59,7 @@ echo "(unused) Hyperparam selection received nu=${NU_ARG}"
 echo "(unused) Search through files with pattern ${results_file_pattern}"
 echo "(unused) Output summary as ${hyperparam_summary_fp}"
 
-python select_hyperparameter_from_runs.py \
+python scripts/select_hyperparameter_from_runs.py \
     --results-dir-base=${results_dir} \
     --results-file-pattern=${results_file_pattern} \
     --models-dir-base=${models_dir_base} \

@@ -1,0 +1,69 @@
+#!/bin/bash
+
+#SBATCH --job-name={{job_name}}
+#SBATCH --partition={{partition}}
+#SBATCH --mem={{mem}}
+#SBATCH --gpus={{num_gpu}}
+#SBATCH --gres=gpu:{{num_gpu}}
+#SBATCH --cpus-per-task={{num_cpu}}
+#SBATCH --nodes={{num_nodes}}
+#SBATCH --time={{job_walltime}}
+#SBATCH --output={{logs_folder}}/{{log_name}}.out
+#SBATCH --error={{logs_folder}}/{{log_name}}.err
+#SBATCH --exclude=
+#SBATCH --mail-type={{mail_type}}
+#SBATCH --mail-user={{mail_user}}
+
+echo "`date` Starting Job"
+echo "SLURM Info: Job name:${SLURM_JOB_NAME}"
+echo "    JOB ID: ${SLURM_JOB_ID}"
+echo "    Host list: ${SLURM_JOB_NODELIST}"
+echo "    CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}"
+nvidia-smi -L
+which python
+
+NU_ARG=$(echo "{{ data_input_nus }}" | sed "s/(\|)\|\| //g" | sed "s/,/ /g")
+NU_NAME=$(echo ${NU_ARG} | sed "s/ /_/g")
+
+# :??
+# Parameters: {{ parameters }}
+
+# For debugging purposes...
+
+{{ command }} \
+--data_input_nus $NU_ARG \
+{{ ref_scobj_dir }} \
+{{ input_meas_dir }} \
+--output_scobj_dir {{ output_scobj_dir }} \
+{{ init_scobj_dir }} \
+{{ dset }} \
+{{ scobj_dir_format }} \
+{{ input_meas_dir_format }} \
+{{ output_scobj_fp_format }} \
+{{ sample_idx_start }} \
+{{ sample_idx_end }} \
+{{ sample_idx_count }} \
+{{ hps_l }} \
+{{ hps_p }} \
+{{ hps_cdf }} \
+{{ hps_sd_mat_dir }} \
+{{ check_scobj_err }} \
+{{ check_meas_err }} \
+{{ overwrite_if_settings_change }} \
+{{ jax_mem_alloc_mb }} \
+{{ receiver_radius }} \
+{{ gn_iters_per_freq }} \
+{{ gn_step_size }} \
+{{ gn_eps }} \
+{{ cg_rtol }} \
+{{ cg_max_iters }} \
+{{ fbp_override }} \
+{{ fbp_iters }} \
+{{ fbp_step_size }} \
+{{ fbp_eps }} \
+{{ allow_increase_error }} \
+{{ noise_to_signal_ratio }} \
+{{ use_noise_seed }} \
+{{ noise_seed_list }} \
+{{ write_every_n }} \
+--debug

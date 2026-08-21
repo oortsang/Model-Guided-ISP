@@ -1,7 +1,7 @@
 ---
 definitions:
   command: python select_hyperparameter_from_runs.py
-  template: "<<rlc-repo>>/<<base-template-eval-mpsr=pipeline_templates/base_template_eval_mmgublock.jinja>>"
+  template: "<<rlc-repo>>/<<base-template-eval-refinement-block=pipeline_templates/base_template_eval_refinement_block.jinja>>"
 
   copy_to_item: true
 

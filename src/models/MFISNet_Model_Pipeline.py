@@ -30,9 +30,9 @@ from src.data.data_transformations import (
 )
 # from src.training_utils.make_predictions import prepare_polar_to_cart
 
-from src.models.MFISNet_pde_solver_refinement_v1 import (
-    MFISNet_pde_solver_refinement_v1,
-    load_MFISNet_pde_solver_refinement_v1_from_state_dict,
+from src.models.MFISNet_Refinement_Block import (
+    MFISNet_Refinement_Block,
+    load_MFISNet_Refinement_Block_from_state_dict,
 )
 from src.models.MFISNet_Fused import (
     MFISNet_Fused,
@@ -441,8 +441,8 @@ def load_MFISNet_Model_Pipeline_from_state_dict(
                 logging.info(f"Finished setting up the differentiable LS solver")
             solvers.append(solver_obj)
 
-            # Load PDE-Solver-Refinement
-            block_fi = load_MFISNet_pde_solver_refinement_v1_from_state_dict(
+            # Load PDE-Solver-Refinement (uses the same block class as MFISNet-Refinement)
+            block_fi = load_MFISNet_Refinement_Block_from_state_dict(
                 state_dict,
                 1, # N_freqs -- always using it as 1 in this case
                 epoch_results_dd=shd_fi,
@@ -450,8 +450,8 @@ def load_MFISNet_Model_Pipeline_from_state_dict(
                 use_pred_d_mh=True,
             )
         elif block_type == "mref" or block_type == "mfisnet-refinement":
-            # Load MFISNet-Refinement (as implemented by pde_solver_refinement)
-            block_fi = load_MFISNet_pde_solver_refinement_v1_from_state_dict(
+            # Load MFISNet-Refinement
+            block_fi = load_MFISNet_Refinement_Block_from_state_dict(
                 state_dict,
                 1, # N_freqs -- always using it as 1 in this case
                 epoch_results_dd=shd_fi,

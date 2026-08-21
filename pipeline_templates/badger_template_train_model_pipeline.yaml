@@ -1,7 +1,7 @@
 ---
 definitions:
   command: python train_MFISNet_Model_Pipeline_e2e.py
-  template: "<<rlc-repo>>/<<base-template-train-mpsr-pipe=base_template_train_mpsr_pipe.jinja>>"
+  template: "<<rlc-repo>>/<<base-template-train-model-pipeline=base_template_train_model_pipeline.jinja>>"
 
   copy_to_item: true
 

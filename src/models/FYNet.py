@@ -39,6 +39,7 @@ class FYNetInverse(MFISNet_Fused):
         N_cnn_1d: int,
         N_cnn_2d: int,
         init_mode: str = None,
+        **kwargs: dict,
     ) -> None:
         """The inverse NN described in section 2 of FY19. NN inputs have shape
         (batch, N_M, N_H, 2) and outputs have shape (batch, N_theta, N_rho),
@@ -56,6 +57,9 @@ class FYNetInverse(MFISNet_Fused):
             init_mode (str): choose which mode to use for initializing parameters
                 Options:
                     [original, uniform-with-old-scale, normal-with-old-scale, he-normal]
+            Miscellaneous keyword arguments (passed through to MFISNet_Fused):
+                train_inputs_mean, train_inputs_std, train_outputs_mean, train_outputs_std:
+                    enable input/output scaling when present, same as MFISNet_Fused
         """
         super().__init__(
             N_h=N_h,
@@ -69,6 +73,7 @@ class FYNetInverse(MFISNet_Fused):
             N_cnn_2d=N_cnn_2d,
             big_init=True,
             init_mode=init_mode,
+            **kwargs,
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -88,6 +93,57 @@ class FYNetInverse(MFISNet_Fused):
         s += f" 1D channel dim {self.c_1d}, 2D channel dim {self.c_2d}. 1D Convs performed with"
         s += f" {self.w_1d} modes, and 2D conv is performed with kernels of size ({self.w_2d}x{self.w_2d})."
         return s
+
+def load_FYNetInverse_from_state_dict(
+    state_dict: dict,
+) -> FYNetInverse:
+    """Sets up a FYNetInverse model from the given state dictionary.
+    Mirrors load_MFISNet_Fused_from_state_dict, but N_freqs is always 1
+    since that's fixed internally by FYNetInverse.
+    """
+    # First, compute hyperparameters from the state dictionary
+    layer_dims = {key:tuple(val.shape) for (key, val) in state_dict.items()}
+    parameter_keys = list(state_dict.keys())
+
+    N_freqs = 1
+    N_cnn_1d = sum("conv_1d_layers" in key for key in parameter_keys)
+    N_cnn_2d = sum(("conv_2d_layers" in key) and ("weight" in key) for key in parameter_keys)
+
+    (c_1d_int, c_1d_in, w_1d) = layer_dims["conv_1d_layers.0"]
+    (c_1d_out, _c_1d_int, _w_1d) = layer_dims[f"conv_1d_layers.{N_cnn_1d-1}"] # last conv1d layer
+
+    (c_2d_int, c_2d_in, w_2d, _) = layer_dims["conv_2d_layers.0.weight"]
+    (c_2d_out, c_2d_int, _, _) = layer_dims[f"conv_2d_layers.{N_cnn_1d-1}.weight"]
+
+    N_h  = c_1d_in // (2 * N_freqs)
+    c_1d = c_1d_int
+    c_2d = c_2d_int
+    N_rho = c_1d_out
+
+    extra_kwargs = {}
+    if "train_inputs_mean" in state_dict.keys():
+        extra_kwargs["train_inputs_mean"] = state_dict["train_inputs_mean"]
+        extra_kwargs["train_inputs_std"] = state_dict["train_inputs_std"]
+    if "train_outputs_mean" in state_dict.keys():
+        extra_kwargs["train_outputs_mean"] = state_dict["train_outputs_mean"]
+        extra_kwargs["train_outputs_std"] = state_dict["train_outputs_std"]
+
+    # Next, initialize a model
+    new_fynet_inverse_model = FYNetInverse(
+        N_h=N_h,
+        N_rho=N_rho,
+        c_1d=c_1d,
+        c_2d=c_2d,
+        w_1d=w_1d,
+        w_2d=w_2d,
+        N_cnn_1d=N_cnn_1d,
+        N_cnn_2d=N_cnn_2d,
+        **extra_kwargs,
+    )
+
+    # Load in the values
+    new_fynet_inverse_model.load_state_dict(state_dict=state_dict, strict=False)
+    return new_fynet_inverse_model
 
 class FYNetForward(torch.nn.Module):
     """FYNetForward for use with inputs/outputs that have already been cast to real dtypes

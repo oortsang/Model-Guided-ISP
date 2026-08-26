@@ -9,7 +9,10 @@ Additionally, this repository contains a custom implementation of the recursive 
 
 The inverse scattering problem is a computationally challenging reconstruction task in wave-based imaging. In addition to enabling real-world applications--like medical imaging, remote sensing, and non-destructive testing--the inverse scattering problem is interesting to study as a classic example of an ill-posed, nonlinear inverse problem. The goal is to image the interior of an object based on how waves (e.g., acoustic or electromagnetic) traveling through the object get scattered. We focus on the multi-frequency setting, depicted below, where we have access to scattered wave measurements taken using incident waves of multiple frequencies.
 
-![Inverse scattering problem setup](.github/assets/hpscnn-assets/inverse_scattering_setup.svg)
+<!-- ![Inverse scattering problem setup](.github/assets/hpscnn-assets/inverse_scattering_setup.svg) -->
+<p align="center">
+  <img src=".github/assets/hpscnn-assets/inverse_scattering_setup.svg" alt="Inverse scattering problem setup">
+</p>
 
 In the paper, we develop a method that recovers high-quality reconstructions orders of magnitude more quickly than classical baselines. To this end, we embed a forward model--as a differential PDE solver--into a neural network architecture. This strategy leverages both physical knowledge of the wave scattering model and prior knowledge of imaging targets learned from training data.
 
@@ -17,18 +20,28 @@ Our proposed architecture, HPS-CNN, is illustrated below. It produces an initial
 The physics-based component uses a [GPU-accelerated PDE solver based on the Hierarchical Poincaré-Steklov (HPS) method](https://github.com/meliao/jaxhps). Specifically, it computes a quantity that is equivalent to the negative gradient of the incoming estimate's error in measurement space with respect to the true observations for that frequency.
 The learned component uses a 2D CNN that takes in the output from the PDE solver, as well as the estimate from the previous frequency.
 
-![Architecture of the HPS-CNN Refinement block](.github/assets/hpscnn-assets/hpscnn_architecture_both.svg)
+<!-- ![Architecture of the HPS-CNN Refinement block](.github/assets/hpscnn-assets/hpscnn_architecture_both.svg) -->
+<p align="center">
+  <img src=".github/assets/hpscnn-assets/hpscnn_architecture_both.svg" alt="Architecture of the HPS-CNN Refinement block">
+</p>
+
 
 Our experiments find that the HPS-CNN model is able to recover accurate reconstructions with a substantial speedup compared with the classical baseline (~100x faster).
 As compared to pure neural network methods, it achieves lower errors (about 5-6x lower) for a given size of training set; alternatively, it can achieve a designated error level with fewer training points (roughly 30x fewer).
 
 Here is a plot comparing different methods by their average error on the test set and how much time is spent per test sample:
 
-![A plot indicating the l2 errors and inference times of different methods](.github/assets/hpscnn-assets/rev_err_vs_time_built.svg)
+<!-- ![A plot indicating the l2 errors and inference times of different methods](.github/assets/hpscnn-assets/rev_err_vs_time_built.svg) -->
+<p align="center">
+  <img src=".github/assets/hpscnn-assets/rev_err_vs_time_built.svg" alt="A plot indicating the l2 errors and inference times of different methods">
+</p>
 
 Here is a plot depicting how the different machine learning methods' performance scales with training data:
 
-![A plot indicating how the different methods scale with different amounts of training data](.github/assets/hpscnn-assets/rev_sample_complexity_built.svg)
+<!-- ![A plot indicating how the different methods scale with different amounts of training data](.github/assets/hpscnn-assets/rev_sample_complexity_built.svg) -->
+<p align="center">
+  <img src=".github/assets/hpscnn-assets/rev_sample_complexity_built.svg" alt="A plot indicating how the different methods scale with different amounts of training data">
+</p>
 
 Please see our paper for all our results and more information about the experiment setup.
 
